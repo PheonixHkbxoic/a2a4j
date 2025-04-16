@@ -111,13 +111,11 @@ public class WebMvcSseServerTransportProvider implements ServerTransportProvider
                         ServerSession s = sessions.remove(sessionId);
                         long restEventSize = s.getRestEventSize(sessionId);
                         log.debug("SSE connection completed for session: {}, restEventSize: {}", sessionId, restEventSize);
-                        s.close();
                     });
                     sseBuilder.onTimeout(() -> {
                         ServerSession s = sessions.remove(sessionId);
                         long restEventSize = s.getRestEventSize(sessionId);
                         log.debug("SSE connection timed out for session: {}, restEventSize: {}", sessionId, restEventSize);
-                        s.close();
                     });
 
                     WebMvcSeeSessionTransport sessionTransport = new WebMvcSeeSessionTransport(sessionId, sseBuilder);
@@ -199,13 +197,13 @@ public class WebMvcSseServerTransportProvider implements ServerTransportProvider
                     String jsonText = OM.writeValueAsString(message);
                     log.debug("sendMessage: {}", jsonText);
                     sseBuilder.id(sessionId).event("message").data(jsonText);
-                    log.debug("Message sent to session {}", sessionId);
                 } catch (Exception e) {
                     log.error("Failed to send message to session {}: {}", sessionId, e.getMessage());
                     sseBuilder.error(e);
                 }
             });
         }
+
 
         /**
          * Converts data from one type to another using the configured ObjectMapper.

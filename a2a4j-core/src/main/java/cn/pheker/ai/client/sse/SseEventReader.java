@@ -58,6 +58,12 @@ public class SseEventReader {
             }
         } catch (IOException e) {
             onError.accept(e);
+        } finally {
+            try {
+                reader.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

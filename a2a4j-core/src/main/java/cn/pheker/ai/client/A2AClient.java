@@ -88,7 +88,12 @@ public class A2AClient {
         return this.doSendRequestForSse(request);
     }
 
-    private Flux<SendTaskStreamingResponse> doSendRequestForSse(SendTaskStreamingRequest request) {
+    public Flux<SendTaskStreamingResponse> sendTaskResubscribe(TaskIdParams params) {
+        TaskResubscriptionRequest request = new TaskResubscriptionRequest(params);
+        return this.doSendRequestForSse(request);
+    }
+
+    private Flux<SendTaskStreamingResponse> doSendRequestForSse(JsonRpcRequest request) {
         HttpPost httpPost = new HttpPost(agentCard.getUrl());
         try {
             StringEntity stringEntity = new StringEntity(objectMapper.writeValueAsString(request), StandardCharsets.UTF_8.name());
@@ -98,18 +103,18 @@ public class A2AClient {
 
             CloseableHttpResponse response = this.http.execute(httpPost);
             int statusCode = response.getStatusLine().getStatusCode();
-            log.debug("statusCode: {}", statusCode);
+            log.debug("doSendRequestForSse statusCode: {}", statusCode);
             if (HttpStatus.SC_OK != statusCode) {
                 throw new A2AClientHTTPError(statusCode, response.getStatusLine().getReasonPhrase());
             }
 
             HttpEntity entity = response.getEntity();
-            log.debug("entity.isStreaming: {}", entity.isStreaming());
+            log.debug("doSendRequestForSse entity.isStreaming: {}", entity.isStreaming());
             BufferedReader buf = new BufferedReader(new InputStreamReader(entity.getContent()));
             SseEventReader reader = new SseEventReader(buf);
-            return Flux.create(sink -> {
+            return Flux.<SendTaskStreamingResponse>create(sink -> {
                 reader.onEvent(sseEvent -> {
-                    log.debug("sseEvent: {}", sseEvent);
+                    log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
                     if (!sseEvent.hasData()) {
                         return;
                     }
@@ -128,6 +133,13 @@ public class A2AClient {
                     log.error("doSendRequestForSse exception: {}", e.getMessage());
                     sink.error(e);
                 });
+            }).doOnComplete(() -> {
+                try {
+                    buf.close();
+                    response.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             });
         } catch (JacksonException e) {
             return Flux.error(new A2AClientJSONError(e.getMessage()));

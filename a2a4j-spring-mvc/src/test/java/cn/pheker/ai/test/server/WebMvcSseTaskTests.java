@@ -224,10 +224,47 @@ public class WebMvcSseTaskTests {
         client.sendTaskSubscribe(params)
                 .doOnError(System.err::println)
                 .subscribe(r -> {
-                    log.info("event data: {}", Util.json(r));
+                    log.info("response {}", Util.json(r));
                 });
         System.out.println("over " + params.getId());
+    }
 
+
+    @Test
+    public void testSendTaskSubscribeResponse2() {
+        TaskSendParams params = TaskSendParams.builder()
+                .id(Uuid.uuid4hex())
+                .sessionId(Uuid.uuid4hex())
+                .historyLength(3)
+                .message((Message.builder().role(Role.USER)).parts(Collections.singletonList(new TextPart("100块人民币能总汇多少美元"))).build())
+                .build();
+        client.sendTaskSubscribe(params)
+                .doOnError(System.err::println)
+                .subscribe(r -> {
+                    log.info("response1 {}", Util.json(r));
+                });
+        System.out.println("over1 " + params.getId());
+
+        TaskIdParams ps = new TaskIdParams();
+        ps.setId(params.getId());
+        client.sendTaskResubscribe(ps)
+                .doOnError(System.err::println)
+                .subscribe(r -> {
+                    log.info("response2 {}", Util.json(r));
+                });
+        System.out.println("over2 " + params.getId());
+    }
+
+    @Test
+    public void testSendTaskResubscribe() {
+        TaskIdParams params = new TaskIdParams();
+        params.setId(Uuid.uuid4hex());
+        client.sendTaskResubscribe(params)
+                .doOnError(System.err::println)
+                .subscribe(r -> {
+                    log.info("response {}", Util.json(r));
+                });
+        System.out.println("over " + params.getId());
     }
 
 

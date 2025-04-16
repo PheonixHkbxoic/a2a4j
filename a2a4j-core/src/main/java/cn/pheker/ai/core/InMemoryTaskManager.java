@@ -10,7 +10,6 @@ import cn.pheker.ai.spec.message.*;
 import cn.pheker.ai.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 /**
  * @author PheonixHkbxoic
@@ -63,13 +61,16 @@ public abstract class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public Mono<Void> dequeueEvent(String taskId, Consumer<UpdateEvent> consumer) {
+    public Flux<UpdateEvent> dequeueEvent(String taskId) {
         LinkedBlockingQueue<UpdateEvent> queue = sseEventQueueMap.get(taskId);
+        if (queue == null) {
+            return Flux.empty();
+        }
         log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
-        Flux.<UpdateEvent>create(sink -> {
+        return Flux.<UpdateEvent>create(sink -> {
             try {
                 while (true) {
-//                    log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
+                    //                    log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
                     UpdateEvent event = queue.take();
                     sink.next(event);
                     if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
@@ -86,8 +87,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
             sseEventQueueMap.remove(taskId);
         }).doOnComplete(() -> {
             sseEventQueueMap.remove(taskId);
-        }).subscribe(consumer);
-        return Mono.empty();
+        }).subscribeOn(Schedulers.single());
     }
 
     @Override
@@ -108,9 +108,8 @@ public abstract class InMemoryTaskManager implements TaskManager {
             return new GetTaskResponse(request.getId(), new TaskNotFoundError());
         }
 
-        Task taskResult = this.appendTaskHistory(task, request.getParams().getHistoryLength());
-
-        return new GetTaskResponse(request.getId(), taskResult);
+        Task taskSnapshot = this.appendTaskHistory(task, request.getParams().getHistoryLength());
+        return new GetTaskResponse(request.getId(), taskSnapshot);
     }
 
 //    @Override
@@ -183,16 +182,21 @@ public abstract class InMemoryTaskManager implements TaskManager {
     protected Task upsertTask(TaskSendParams taskSendParams) {
         log.info("Upserting task: {}", taskSendParams.getId());
 
-        Task task = this.tasks.get(taskSendParams.getId());
-        if (task == null) {
-            task = Task.builder().id(taskSendParams.getId()).sessionId(taskSendParams.getSessionId()).status(new TaskStatus(TaskState.SUBMITTED)).history(new ArrayList<>()).build();
-            this.tasks.put(taskSendParams.getId(), task);
-        }
+        lock.lock();
+        try {
+            Task task = this.tasks.get(taskSendParams.getId());
+            if (task == null) {
+                task = Task.builder().id(taskSendParams.getId()).sessionId(taskSendParams.getSessionId()).status(new TaskStatus(TaskState.SUBMITTED)).history(new ArrayList<>()).build();
+                this.tasks.put(taskSendParams.getId(), task);
+            }
 
-        if (taskSendParams.getMessage() != null) {
-            task.getHistory().add(taskSendParams.getMessage());
+            if (taskSendParams.getMessage() != null) {
+                task.getHistory().add(taskSendParams.getMessage());
+            }
+            return task;
+        } finally {
+            lock.unlock();
         }
-        return task;
     }
 
     protected Task updateStore(String taskId, TaskStatus status, List<Artifact> artifacts) {
@@ -220,6 +224,13 @@ public abstract class InMemoryTaskManager implements TaskManager {
         }
     }
 
+    /**
+     * 获取task快照，并返回最多historyLength条历史消息
+     *
+     * @param task
+     * @param historyLength
+     * @return
+     */
     protected Task appendTaskHistory(Task task, @Nullable Integer historyLength) {
         Task copy = Util.deepCopyJson(task, Task.class);
         assert copy != null;

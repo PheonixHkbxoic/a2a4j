@@ -2,9 +2,8 @@ package cn.pheker.ai.core;
 
 import cn.pheker.ai.spec.entity.UpdateEvent;
 import cn.pheker.ai.spec.message.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.function.Consumer;
 
 /**
  * @author PheonixHkbxoic
@@ -17,7 +16,7 @@ public interface TaskManager {
 
     SendTaskResponse onSendTask(SendTaskRequest request);
 
-    Mono<Void> onSendTaskSubscribe(SendTaskStreamingRequest request);
+    Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request);
 
     CancelTaskResponse onCancelTask(CancelTaskRequest request);
 
@@ -25,9 +24,9 @@ public interface TaskManager {
 
     SetTaskPushNotificationResponse onSetTaskPushNotification(SetTaskPushNotificationRequest request);
 
-    Mono<Void> onResubscribeTask(TaskResubscriptionRequest request);
+    Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request);
 
-    Mono<Void> dequeueEvent(String taskId, Consumer<UpdateEvent> consumer);
+    Flux<UpdateEvent> dequeueEvent(String taskId);
 
     long getRestEventSize(String taskId);
 }

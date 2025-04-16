@@ -14,6 +14,11 @@ import java.util.concurrent.TimeUnit;
  * @desc
  */
 public class TestReactor {
+    @Test
+    public void testEmpty() {
+        Object obj = Mono.empty().block();
+        System.out.println("obj = " + obj);
+    }
 
     @Test
     public void test() throws InterruptedException {
@@ -59,5 +64,5 @@ public class TestReactor {
                     });
         });
     }
-    
+
 }

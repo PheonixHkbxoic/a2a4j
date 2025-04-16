@@ -35,22 +35,23 @@ public class ServerSession implements Session {
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             SendTaskStreamingRequest req = transport.unmarshalFrom(request, new TypeReference<SendTaskStreamingRequest>() {
             });
-            taskManager.onSendTaskSubscribe(req);
+            taskManager.onSendTaskSubscribe(req).subscribe(transport::sendMessage);
             taskId = req.getParams().getId();
         } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             TaskResubscriptionRequest req = transport.unmarshalFrom(request, new TypeReference<TaskResubscriptionRequest>() {
             });
-            taskManager.onResubscribeTask(req).block();
+            taskManager.onResubscribeTask(req).subscribe(transport::sendMessage);
             taskId = req.getParams().getId();
         } else {
             return Mono.error(new ValueError(new MethodNotFoundError().getMessage()));
         }
 
         // consumer
-        return taskManager.dequeueEvent(taskId, updateEvent -> {
+        taskManager.dequeueEvent(taskId).subscribe(updateEvent -> {
             log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
             transport.sendMessage(new SendTaskStreamingResponse(request.getId(), updateEvent)).block();
         });
+        return Mono.empty();
     }
 
 

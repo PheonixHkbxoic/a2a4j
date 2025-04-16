@@ -3,6 +3,7 @@ package cn.pheker.ai.test.server;
 import cn.pheker.ai.core.InMemoryTaskManager;
 import cn.pheker.ai.spec.ValueError;
 import cn.pheker.ai.spec.entity.*;
+import cn.pheker.ai.spec.error.InternalError;
 import cn.pheker.ai.spec.error.InvalidParamsError;
 import cn.pheker.ai.spec.message.*;
 import cn.pheker.ai.util.Util;
@@ -14,8 +15,6 @@ import reactor.core.scheduler.Schedulers;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -43,88 +42,99 @@ public class EchoTaskManager extends InMemoryTaskManager {
         if (error != null) {
             return new SendTaskResponse(request.getId(), error.getError());
         }
-        // check pushNotification
+        // TODO check pushNotification
 
-        // save
+        // 2. save and notification
         this.upsertTask(ps);
         this.updateStore(ps.getId(), new TaskStatus(TaskState.WORKING), null);
+        // TODO send task notification
 
-        // send task notification
-
-        // 2. agent invoke
+        // 3. agent invoke
         log.info("sessionId: {}", ps.getSessionId());
         List<Artifact> artifacts = this.agentInvoke(ps).block();
+
+        // 4. save and notification
         Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
+        // TODO send task notification
 
-        // handle agent response
-        this.appendTaskHistory(task, 3);
-
-        return new SendTaskResponse(task);
+        Task taskSnapshot = this.appendTaskHistory(task, 3);
+        return new SendTaskResponse(taskSnapshot);
     }
 
     @Override
-    public Mono<Void> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+    public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
         log.info("onSendTaskSubscribe request: {}", request);
         TaskSendParams ps = request.getParams();
         String taskId = ps.getId();
-        LinkedBlockingQueue<UpdateEvent> queue = this.initEventQueue(taskId, false);
-        assert queue != null;
 
-        // 1. check
-        JsonRpcResponse<Object> error = this.validRequest(request);
-        if (error != null) {
-            throw new ValueError(error.getError().getMessage());
+        try {
+            // 1. check
+            JsonRpcResponse<Object> error = this.validRequest(request);
+            if (error != null) {
+                throw new ValueError(error.getError().getMessage());
+            }
+            // check pushNotification
+
+            // save
+            this.upsertTask(ps);
+            this.updateStore(taskId, new TaskStatus(TaskState.WORKING), null);
+            // TODO send task notification
+
+
+            this.initEventQueue(taskId, false);
+            // start thread to hand agent task
+            this.startAgentTaskThread(taskId);
+
+        } catch (Exception e) {
+            return Mono.just(new JsonRpcResponse(request.getId(), new InternalError(e.getMessage())));
         }
-        // check pushNotification
-
-        // save
-        this.upsertTask(ps);
-        Task task = this.updateStore(taskId, new TaskStatus(TaskState.WORKING), null);
-
-        // simulate agent token stream
-        Flux.range(1, 10)
-                .subscribeOn(Schedulers.single())
-                .subscribe(i -> {
-                    List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
-                    TaskState state;
-                    Message message = null;
-                    Artifact artifact = null;
-                    boolean finalFlag = false;
-                    if (i == 10) {
-                        state = TaskState.COMPLETED;
-                        finalFlag = true;
-                        artifact = new Artifact(parts, 0, false);
-                    } else {
-                        state = TaskState.WORKING;
-                        message = new Message(Role.AGENT, parts, null);
-                    }
-
-                    TaskStatus taskStatus = new TaskStatus(state, message);
-                    Task latestTask = this.updateStore(task.getId(), taskStatus, Collections.singletonList(artifact));
-                    // send notification
-
-                    // artifact event
-                    if (artifact != null) {
-                        TaskArtifactUpdateEvent taskArtifactUpdateEvent = new TaskArtifactUpdateEvent(task.getId(), artifact);
-                        this.enqueueEvent(task.getId(), taskArtifactUpdateEvent);
-                    }
-
-                    // status event
-                    TaskStatusUpdateEvent taskStatusUpdateEvent = new TaskStatusUpdateEvent(task.getId(), taskStatus, finalFlag);
-                    this.enqueueEvent(task.getId(), taskStatusUpdateEvent);
-
-                    // simulate long task
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(100);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
         return Mono.empty();
     }
 
+    private void startAgentTaskThread(String taskId) {
+        // simulate agent token stream and enqueue
+        Flux.range(1, 10).subscribeOn(Schedulers.single()).subscribe(i -> {
+            List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
+            TaskState state;
+            Message message = null;
+            Artifact artifact = null;
+            boolean finalFlag = false;
+            if (i == 10) {
+                state = TaskState.COMPLETED;
+                finalFlag = true;
+                artifact = new Artifact(parts, 0, false);
+            } else {
+                state = TaskState.WORKING;
+                message = new Message(Role.AGENT, parts, null);
+            }
+
+            TaskStatus taskStatus = new TaskStatus(state, message);
+            Task latestTask = this.updateStore(taskId, taskStatus, Collections.singletonList(artifact));
+            // send notification
+            // TODO
+
+            // artifact event
+            if (artifact != null) {
+                TaskArtifactUpdateEvent taskArtifactUpdateEvent = new TaskArtifactUpdateEvent(taskId, artifact);
+                this.enqueueEvent(taskId, taskArtifactUpdateEvent);
+            }
+
+            // status event
+            TaskStatusUpdateEvent taskStatusUpdateEvent = new TaskStatusUpdateEvent(taskId, taskStatus, finalFlag);
+            this.enqueueEvent(taskId, taskStatusUpdateEvent);
+        });
+    }
+
     @Override
-    public Mono<Void> onResubscribeTask(TaskResubscriptionRequest request) {
+    public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+        TaskIdParams params = request.getParams();
+        try {
+            this.initEventQueue(params.getId(), true);
+        } catch (Exception e) {
+            log.error("Error while reconnecting to SSE stream: {}", e.getMessage());
+            return Mono.just(new JsonRpcResponse(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
+        }
+
         return Mono.empty();
     }
 

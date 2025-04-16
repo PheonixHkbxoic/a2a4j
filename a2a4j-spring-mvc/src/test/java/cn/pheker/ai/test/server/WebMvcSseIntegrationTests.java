@@ -8,16 +8,12 @@ import cn.pheker.ai.core.InMemoryTaskManager;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.server.A2AServer;
 import cn.pheker.ai.server.WebMvcSseServerTransportProvider;
-import cn.pheker.ai.spec.ValueError;
 import cn.pheker.ai.spec.entity.AgentCapabilities;
 import cn.pheker.ai.spec.entity.AgentCard;
 import cn.pheker.ai.spec.entity.AgentSkill;
 import cn.pheker.ai.spec.entity.Task;
-import cn.pheker.ai.spec.message.SendTaskRequest;
-import cn.pheker.ai.spec.message.SendTaskResponse;
-import cn.pheker.ai.spec.message.SendTaskStreamingRequest;
-import cn.pheker.ai.spec.message.TaskResubscriptionRequest;
-import cn.pheker.ai.util.Util;
+import cn.pheker.ai.spec.error.UnsupportedOperationError;
+import cn.pheker.ai.spec.message.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -80,13 +76,13 @@ public class WebMvcSseIntegrationTests {
                 }
 
                 @Override
-                public Mono<Void> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-                    return Mono.empty();
+                public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+                    return Mono.just(new JsonRpcResponse(request.getId(), new UnsupportedOperationError()));
                 }
 
                 @Override
-                public Mono<Void> onResubscribeTask(TaskResubscriptionRequest request) {
-                    return Mono.error(new ValueError(Util.newNotImplementedError(request.getId()).getError().getMessage()));
+                public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+                    return Mono.just(new JsonRpcResponse(request.getId(), new UnsupportedOperationError()));
                 }
             };
         }

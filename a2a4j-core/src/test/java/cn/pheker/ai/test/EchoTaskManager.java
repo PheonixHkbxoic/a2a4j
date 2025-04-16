@@ -61,7 +61,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<Void> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+    public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
         return Mono.fromRunnable(() -> {
             log.info("request: {}", request);
             TaskSendParams ps = request.getParams();
@@ -119,7 +119,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<Void> onResubscribeTask(TaskResubscriptionRequest request) {
+    public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
         return Mono.empty();
     }
 
