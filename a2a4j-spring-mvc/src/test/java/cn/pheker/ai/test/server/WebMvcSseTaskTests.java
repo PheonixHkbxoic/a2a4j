@@ -7,7 +7,7 @@ import cn.pheker.ai.client.A2AClient;
 import cn.pheker.ai.client.AgentCardResolver;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.server.A2AServer;
-import cn.pheker.ai.server.WebMvcSseServerTransportProvider;
+import cn.pheker.ai.server.WebMvcSseServerAdapter;
 import cn.pheker.ai.spec.entity.*;
 import cn.pheker.ai.spec.error.JsonRpcError;
 import cn.pheker.ai.spec.error.TaskNotFoundError;
@@ -46,7 +46,7 @@ public class WebMvcSseTaskTests {
 
 
     private static AgentCard agentCard;
-    private static WebMvcSseServerTransportProvider serverTransportProvider;
+    private static WebMvcSseServerAdapter serverTransportProvider;
 
 
     @Configuration
@@ -78,13 +78,13 @@ public class WebMvcSseTaskTests {
         }
 
         @Bean
-        public WebMvcSseServerTransportProvider webMvcSseServerTransportProvider() {
-            return new WebMvcSseServerTransportProvider(agentCard(), taskManager());
+        public WebMvcSseServerAdapter webMvcSseServerAdapter() {
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null);
         }
 
         @Bean
-        public RouterFunction<ServerResponse> routerFunction(WebMvcSseServerTransportProvider transportProvider) {
-            return transportProvider.getRouterFunction();
+        public RouterFunction<ServerResponse> routerFunction(WebMvcSseServerAdapter serverAdapter) {
+            return serverAdapter.getRouterFunction();
         }
 
     }
@@ -116,7 +116,7 @@ public class WebMvcSseTaskTests {
         appContext.refresh();
 
         agentCard = appContext.getBean(AgentCard.class);
-        serverTransportProvider = appContext.getBean(WebMvcSseServerTransportProvider.class);
+        serverTransportProvider = appContext.getBean(WebMvcSseServerAdapter.class);
 
         // Create DispatcherServlet with our Spring context
         DispatcherServlet dispatcherServlet = new DispatcherServlet(appContext);
@@ -260,7 +260,7 @@ public class WebMvcSseTaskTests {
         TaskIdParams params = new TaskIdParams();
         params.setId(Uuid.uuid4hex());
         client.sendTaskResubscribe(params)
-                .doOnError(System.err::println)
+                .doOnError(System.out::println)
                 .subscribe(r -> {
                     log.info("response {}", Util.json(r));
                 });

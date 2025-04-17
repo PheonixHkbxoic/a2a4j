@@ -1,6 +1,7 @@
 package cn.pheker.ai.core;
 
 import cn.pheker.ai.spec.message.JsonRpcRequest;
+import cn.pheker.ai.spec.message.JsonRpcResponse;
 import reactor.core.publisher.Mono;
 
 /**
@@ -10,7 +11,7 @@ import reactor.core.publisher.Mono;
  */
 public interface Session {
 
-    <T> Mono<Void> handleRequest(JsonRpcRequest<T> request);
+    <T> Mono<JsonRpcResponse> handleRequest(JsonRpcRequest<T> request);
 
     Mono<Void> closeGracefully();
 

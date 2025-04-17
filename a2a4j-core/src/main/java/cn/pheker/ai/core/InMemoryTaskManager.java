@@ -10,6 +10,7 @@ import cn.pheker.ai.spec.message.*;
 import cn.pheker.ai.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
@@ -30,9 +31,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public abstract class InMemoryTaskManager implements TaskManager {
     private final ReentrantLock lock = new ReentrantLock();
     private final Map<String, Task> tasks = new HashMap<>();
-    private final Map<String, PushNotificationConfig> pushNotificationConfigs = new HashMap<>();
-
+    private final Map<String, PushNotificationConfig> pushNotificationInfos = new HashMap<>();
     private final ConcurrentMap<String, LinkedBlockingQueue<UpdateEvent>> sseEventQueueMap = new ConcurrentHashMap<>();
+    private boolean isClosing;
 
 
     public InMemoryTaskManager() {
@@ -57,7 +58,15 @@ public abstract class InMemoryTaskManager implements TaskManager {
         if (queue == null) {
             throw new RuntimeException("queue not init, taskId: " + taskId);
         }
+        if (isClosing) {
+            throw new RuntimeException("server is closing");
+        }
         queue.offer(updateEvent);
+    }
+
+    @Override
+    public Mono<Void> closeGracefully() {
+        return Mono.fromRunnable(() -> Flux.fromStream(sseEventQueueMap.keySet().stream()).doFirst(() -> isClosing = true).subscribe(sseEventQueueMap::remove));
     }
 
     @Override
@@ -68,26 +77,30 @@ public abstract class InMemoryTaskManager implements TaskManager {
         }
         log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
         return Flux.<UpdateEvent>create(sink -> {
-            try {
-                while (true) {
-                    //                    log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
-                    UpdateEvent event = queue.take();
-                    sink.next(event);
-                    if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
-                        sink.complete();
-                        break;
+                    try {
+                        while (true) {
+                            //                    log.debug("dequeueEvent taskId: {}, restEventSize: {}", taskId, getRestEventSize(taskId));
+                            UpdateEvent event = queue.take();
+                            sink.next(event);
+                            if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
+                                sink.complete();
+                                break;
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        sink.error(e);
+                        throw new RuntimeException(e);
                     }
-                }
-            } catch (InterruptedException e) {
-                sink.error(e);
-                throw new RuntimeException(e);
-            }
-        }).publishOn(Schedulers.single()).doOnError(e -> {
-            log.error("dequeueEvent taskId: {}, error: {}", taskId, e.getMessage());
-            sseEventQueueMap.remove(taskId);
-        }).doOnComplete(() -> {
-            sseEventQueueMap.remove(taskId);
-        }).subscribeOn(Schedulers.single());
+                })
+                .publishOn(Schedulers.single())
+//                .doOnError(e -> {
+//                    log.error("dequeueEvent taskId: {}, error: {}", taskId, e.getMessage());
+//                    sseEventQueueMap.remove(taskId);
+//                })
+                .doOnComplete(() -> {
+                    sseEventQueueMap.remove(taskId);
+                })
+                .subscribeOn(Schedulers.single());
     }
 
     @Override
@@ -142,7 +155,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
             if (task == null) {
                 return new GetTaskPushNotificationResponse(taskId, new TaskNotFoundError());
             }
-            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder().id(taskId).pushNotificationConfig(pushNotificationConfigs.get(taskId)).build();
+            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder().id(taskId).pushNotificationConfig(pushNotificationInfos.get(taskId)).build();
             return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
         } catch (Exception e) {
             log.error("Getting task push notification exception: {}", e.getMessage());
@@ -162,7 +175,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
             if (task == null) {
                 return new SetTaskPushNotificationResponse(taskId, new TaskNotFoundError());
             }
-            pushNotificationConfigs.put(taskId, request.getParams().getPushNotificationConfig());
+            pushNotificationInfos.put(taskId, request.getParams().getPushNotificationConfig());
         } catch (Exception e) {
             log.error("Setting task push notification exception: {}", e.getMessage());
             return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
@@ -173,10 +186,10 @@ public abstract class InMemoryTaskManager implements TaskManager {
         return new SetTaskPushNotificationResponse(taskId, request.getParams());
     }
 
-//    @Override
-//    public SendTaskStreamingResponse onResubscribeTask(TaskResubscriptionRequest request) {
-//        return null;
-//    }
+    @Override
+    public boolean hasPushNotificationInfo(String taskId) {
+        return pushNotificationInfos.get(taskId) != null;
+    }
 
 
     protected Task upsertTask(TaskSendParams taskSendParams) {
@@ -214,7 +227,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
             }
             if (artifacts != null && !artifacts.isEmpty()) {
                 if (task.getArtifacts() == null) {
-                    task.setArtifacts(new ArrayList<Artifact>());
+                    task.setArtifacts(new ArrayList<>());
                 }
                 task.getArtifacts().addAll(artifacts);
             }
@@ -243,5 +256,4 @@ public abstract class InMemoryTaskManager implements TaskManager {
         }
         return copy;
     }
-
 }

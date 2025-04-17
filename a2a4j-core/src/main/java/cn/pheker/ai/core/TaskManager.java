@@ -29,4 +29,8 @@ public interface TaskManager {
     Flux<UpdateEvent> dequeueEvent(String taskId);
 
     long getRestEventSize(String taskId);
+
+    boolean hasPushNotificationInfo(String taskId);
+
+    Mono<Void> closeGracefully();
 }

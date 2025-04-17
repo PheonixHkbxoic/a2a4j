@@ -7,7 +7,7 @@ import cn.pheker.ai.client.AgentCardResolver;
 import cn.pheker.ai.core.InMemoryTaskManager;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.server.A2AServer;
-import cn.pheker.ai.server.WebMvcSseServerTransportProvider;
+import cn.pheker.ai.server.WebMvcSseServerAdapter;
 import cn.pheker.ai.spec.entity.AgentCapabilities;
 import cn.pheker.ai.spec.entity.AgentCard;
 import cn.pheker.ai.spec.entity.AgentSkill;
@@ -45,7 +45,7 @@ public class WebMvcSseIntegrationTests {
 
 
     private AgentCard agentCard;
-    private WebMvcSseServerTransportProvider serverTransportProvider;
+    private WebMvcSseServerAdapter serverTransportProvider;
 
 
     @Configuration
@@ -88,12 +88,12 @@ public class WebMvcSseIntegrationTests {
         }
 
         @Bean
-        public WebMvcSseServerTransportProvider webMvcSseServerTransportProvider() {
-            return new WebMvcSseServerTransportProvider(agentCard(), taskManager());
+        public WebMvcSseServerAdapter webMvcSseServerTransportProvider() {
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null);
         }
 
         @Bean
-        public RouterFunction<ServerResponse> routerFunction(WebMvcSseServerTransportProvider transportProvider) {
+        public RouterFunction<ServerResponse> routerFunction(WebMvcSseServerAdapter transportProvider) {
             return transportProvider.getRouterFunction();
         }
 
@@ -124,7 +124,7 @@ public class WebMvcSseIntegrationTests {
         appContext.refresh();
 
         agentCard = appContext.getBean(AgentCard.class);
-        serverTransportProvider = appContext.getBean(WebMvcSseServerTransportProvider.class);
+        serverTransportProvider = appContext.getBean(WebMvcSseServerAdapter.class);
 
         // Create DispatcherServlet with our Spring context
         DispatcherServlet dispatcherServlet = new DispatcherServlet(appContext);

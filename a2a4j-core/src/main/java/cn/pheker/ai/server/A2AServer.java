@@ -1,7 +1,6 @@
 package cn.pheker.ai.server;
 
-import cn.pheker.ai.core.ServerSession;
-import cn.pheker.ai.core.ServerTransportProvider;
+import cn.pheker.ai.core.ServerAdapter;
 import cn.pheker.ai.spec.entity.AgentCard;
 import reactor.core.publisher.Mono;
 
@@ -12,20 +11,19 @@ import reactor.core.publisher.Mono;
  */
 public class A2AServer {
     private AgentCard agentCard;
-    private ServerTransportProvider transportProvider;
+    private ServerAdapter serverAdapter;
 
-    public A2AServer(AgentCard agentCard, ServerTransportProvider transportProvider) {
+    public A2AServer(AgentCard agentCard, ServerAdapter serverAdapter) {
         this.agentCard = agentCard;
-        this.transportProvider = transportProvider;
-        this.transportProvider.setSessionFactory(sessionTransport -> new ServerSession(transportProvider.getTaskManager(), sessionTransport));
+        this.serverAdapter = serverAdapter;
     }
 
     public void close() {
-        this.closeGracefully().subscribe();
+        this.serverAdapter.close();
     }
 
     public Mono<Void> closeGracefully() {
-        return this.transportProvider.closeGracefully();
+        return this.serverAdapter.closeGracefully();
     }
 
 }

@@ -86,7 +86,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
             this.startAgentTaskThread(taskId);
 
         } catch (Exception e) {
-            return Mono.just(new JsonRpcResponse(request.getId(), new InternalError(e.getMessage())));
+            return Mono.just(new JsonRpcResponse<>(request.getId(), new InternalError(e.getMessage())));
         }
         return Mono.empty();
     }

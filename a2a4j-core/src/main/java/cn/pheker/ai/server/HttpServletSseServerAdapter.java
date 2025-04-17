@@ -1,8 +1,7 @@
 package cn.pheker.ai.server;
 
+import cn.pheker.ai.core.ServerAdapter;
 import cn.pheker.ai.core.ServerSession;
-import cn.pheker.ai.core.ServerTransportProvider;
-import cn.pheker.ai.core.TaskManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
@@ -23,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @WebServlet(asyncSupported = true)
-public class HttpServletSseServerTransportProvider extends HttpServlet implements ServerTransportProvider {
+public class HttpServletSseServerAdapter extends HttpServlet implements ServerAdapter {
 
 
     public static final String UTF_8 = "UTF-8";
@@ -42,31 +41,21 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
     private final AtomicBoolean isClosing = new AtomicBoolean(false);
     private ServerSession.Factory sessionFactory;
 
-    public HttpServletSseServerTransportProvider(ObjectMapper objectMapper, String messageEndpoint,
-                                                 String sseEndpoint) {
+    public HttpServletSseServerAdapter(ObjectMapper objectMapper, String messageEndpoint,
+                                       String sseEndpoint) {
         this(objectMapper, DEFAULT_BASE_URL, messageEndpoint, sseEndpoint);
     }
 
-    public HttpServletSseServerTransportProvider(ObjectMapper objectMapper, String baseUrl, String messageEndpoint,
-                                                 String sseEndpoint) {
+    public HttpServletSseServerAdapter(ObjectMapper objectMapper, String baseUrl, String messageEndpoint,
+                                       String sseEndpoint) {
         this.objectMapper = objectMapper;
         this.baseUrl = baseUrl;
         this.messageEndpoint = messageEndpoint;
         this.sseEndpoint = sseEndpoint;
     }
 
-    public HttpServletSseServerTransportProvider(ObjectMapper objectMapper, String messageEndpoint) {
+    public HttpServletSseServerAdapter(ObjectMapper objectMapper, String messageEndpoint) {
         this(objectMapper, messageEndpoint, DEFAULT_SSE_ENDPOINT);
-    }
-
-    @Override
-    public TaskManager getTaskManager() {
-        return null;
-    }
-
-    @Override
-    public void setSessionFactory(ServerSession.Factory sessionFactory) {
-        this.sessionFactory = sessionFactory;
     }
 
 
@@ -265,14 +254,14 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
             return this;
         }
 
-        public HttpServletSseServerTransportProvider build() {
+        public HttpServletSseServerAdapter build() {
             if (objectMapper == null) {
                 throw new IllegalStateException("ObjectMapper must be set");
             }
             if (messageEndpoint == null) {
                 throw new IllegalStateException("MessageEndpoint must be set");
             }
-            return new HttpServletSseServerTransportProvider(objectMapper, baseUrl, messageEndpoint, sseEndpoint);
+            return new HttpServletSseServerAdapter(objectMapper, baseUrl, messageEndpoint, sseEndpoint);
         }
 
     }

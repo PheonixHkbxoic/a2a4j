@@ -7,11 +7,7 @@ import reactor.core.publisher.Mono;
  * @date 2025/4/11 16:26
  * @desc
  */
-public interface ServerTransportProvider {
-    TaskManager getTaskManager();
-
-    void setSessionFactory(ServerSession.Factory sessionFactory);
-
+public interface ServerAdapter {
     default void close() {
         this.closeGracefully().subscribe();
     }
