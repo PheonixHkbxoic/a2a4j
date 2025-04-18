@@ -1,5 +1,6 @@
 package cn.pheker.ai.server;
 
+import cn.pheker.ai.core.PushNotificationSenderAuth;
 import cn.pheker.ai.core.ServerAdapter;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.spec.entity.AgentCard;
@@ -21,6 +22,8 @@ import reactor.core.publisher.Mono;
 
 import javax.validation.ValidationException;
 import javax.validation.Validator;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * @author PheonixHkbxoic
@@ -33,20 +36,22 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
     private ObjectMapper om;
     private String messageEndpoint = "/";
     private String agentCardEndpoint = "/.well-known/agent.json";
+    private String jwksEndpoint = "/.well-known/jwks.json";
     private final AgentCard agentCard;
     private final RouterFunction<ServerResponse> routerFunction;
     private TaskManager taskManager;
     private Validator validator;
+    private PushNotificationSenderAuth auth;
 
     private volatile boolean isClosing = false;
 
-    public WebMvcSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator) {
-        this(new ObjectMapper(), null, null, agentCard, taskManager, validator);
+    public WebMvcSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth auth) {
+        this(new ObjectMapper(), null, null, agentCard, taskManager, validator, null, auth);
     }
 
     public WebMvcSseServerAdapter(ObjectMapper objectMapper, String messageEndpoint,
                                   String agentCardEndpoint, AgentCard agentCard, TaskManager taskManager,
-                                  Validator validator) {
+                                  Validator validator, String jwksEndpoint, PushNotificationSenderAuth auth) {
         om = objectMapper;
         if (messageEndpoint != null) {
             this.messageEndpoint = messageEndpoint;
@@ -54,13 +59,21 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
         if (agentCardEndpoint != null) {
             this.agentCardEndpoint = agentCardEndpoint;
         }
+        if (jwksEndpoint != null) {
+            this.jwksEndpoint = jwksEndpoint;
+        }
         this.agentCard = agentCard;
         this.taskManager = taskManager;
+        this.validator = validator;
+        this.auth = auth;
         this.routerFunction = RouterFunctions.route()
                 .GET(this.agentCardEndpoint, this::handleAgentCard)
+                .GET(this.jwksEndpoint, request -> {
+                    Map<String, Object> data = Collections.singletonMap("keys", Collections.singletonList(auth.getPublicKey().toJSONObject()));
+                    return ServerResponse.ok().body(data);
+                })
                 .POST(this.messageEndpoint, this::handleMessage)
                 .build();
-        this.validator = validator;
     }
 
 

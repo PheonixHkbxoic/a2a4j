@@ -30,6 +30,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
     private final List<String> supportModes = Arrays.asList("text", "file", "data");
 
     public EchoTaskManager(EchoAgent agent) {
+        super();
         this.agent = agent;
     }
 
@@ -42,22 +43,27 @@ public class EchoTaskManager extends InMemoryTaskManager {
         if (error != null) {
             return new SendTaskResponse(request.getId(), error.getError());
         }
-        // TODO check pushNotification
+        // check and set pushNotification
+        if (ps.getPushNotification() != null) {
+            boolean verified = this.verifyAndSetPushNotificationInfo(ps.getId(), ps.getPushNotification());
+            if (!verified) {
+                return new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid"));
+            }
+        }
 
         // 2. save and notification
         this.upsertTask(ps);
-        this.updateStore(ps.getId(), new TaskStatus(TaskState.WORKING), null);
-        // TODO send task notification
+        Task taskWorking = this.updateStore(ps.getId(), new TaskStatus(TaskState.WORKING), null);
+        this.sendTaskNotification(taskWorking);
 
         // 3. agent invoke
-        log.info("sessionId: {}", ps.getSessionId());
         List<Artifact> artifacts = this.agentInvoke(ps).block();
 
         // 4. save and notification
-        Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
-        // TODO send task notification
+        Task taskCompleted = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
+        this.sendTaskNotification(taskCompleted);
 
-        Task taskSnapshot = this.appendTaskHistory(task, 3);
+        Task taskSnapshot = this.appendTaskHistory(taskCompleted, 3);
         return new SendTaskResponse(taskSnapshot);
     }
 
@@ -73,26 +79,38 @@ public class EchoTaskManager extends InMemoryTaskManager {
             if (error != null) {
                 throw new ValueError(error.getError().getMessage());
             }
-            // check pushNotification
+            // check and set pushNotification
+            if (ps.getPushNotification() != null) {
+                boolean verified = this.verifyAndSetPushNotificationInfo(ps.getId(), ps.getPushNotification());
+                if (!verified) {
+                    return Mono.just(new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid")));
+                }
+            }
 
-            // save
+            // 2. save and notification
             this.upsertTask(ps);
-            this.updateStore(taskId, new TaskStatus(TaskState.WORKING), null);
-            // TODO send task notification
-
+            Task taskWorking = this.updateStore(taskId, new TaskStatus(TaskState.WORKING), null);
+            this.sendTaskNotification(taskWorking);
 
             this.initEventQueue(taskId, false);
-            // start thread to hand agent task
-            this.startAgentTaskThread(taskId);
+            // 3. start thread to hand agent task
+            this.startAgentTaskThread(request);
 
         } catch (Exception e) {
+            log.error("Error in SSE stream: {}", e.getMessage(), e);
             return Mono.just(new JsonRpcResponse<>(request.getId(), new InternalError(e.getMessage())));
         }
         return Mono.empty();
     }
 
-    private void startAgentTaskThread(String taskId) {
-        // simulate agent token stream and enqueue
+    private void startAgentTaskThread(SendTaskStreamingRequest request) {
+        String id = request.getId();
+        TaskSendParams params = request.getParams();
+        String taskId = params.getId();
+        String sessionId = params.getSessionId();
+        String prompts = getUserQuery(params);
+
+        // TODO simulate agent token stream and enqueue
         Flux.range(1, 10).subscribeOn(Schedulers.single()).subscribe(i -> {
             List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
             TaskState state;
@@ -103,6 +121,10 @@ public class EchoTaskManager extends InMemoryTaskManager {
                 state = TaskState.COMPLETED;
                 finalFlag = true;
                 artifact = new Artifact(parts, 0, false);
+            } else if (i == 5) {
+                state = TaskState.INPUT_REQUIRED;
+                message = new Message(Role.AGENT, parts, null);
+                finalFlag = true;
             } else {
                 state = TaskState.WORKING;
                 message = new Message(Role.AGENT, parts, null);
@@ -111,7 +133,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
             TaskStatus taskStatus = new TaskStatus(state, message);
             Task latestTask = this.updateStore(taskId, taskStatus, Collections.singletonList(artifact));
             // send notification
-            // TODO
+            this.sendTaskNotification(latestTask);
 
             // artifact event
             if (artifact != null) {
@@ -141,11 +163,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
 
     // simulate agent invoke
     private Mono<List<Artifact>> agentInvoke(TaskSendParams ps) {
-        List<Part> parts = ps.getMessage().getParts();
-        String prompts = parts.stream()
-                .filter(p -> p instanceof TextPart)
-                .map(p -> ((TextPart) p).getText())
-                .collect(Collectors.joining("\n"));
+        String prompts = getUserQuery(ps);
 
         return this.agent.chat(prompts).map(answer -> {
             Artifact artifact = Artifact.builder()
@@ -156,6 +174,15 @@ public class EchoTaskManager extends InMemoryTaskManager {
                     .build();
             return Collections.singletonList(artifact);
         });
+    }
+
+    private static String getUserQuery(TaskSendParams ps) {
+        List<Part> parts = ps.getMessage().getParts();
+        String prompts = parts.stream()
+                .filter(p -> p instanceof TextPart)
+                .map(p -> ((TextPart) p).getText())
+                .collect(Collectors.joining("\n"));
+        return prompts;
     }
 
     private JsonRpcResponse<Object> validRequest(SendTaskRequest request) {

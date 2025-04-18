@@ -88,7 +88,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
                         }
                     })
                     .subscribe(i -> {
-                        List<Part> parts = Arrays.asList(new TextPart("sse message: " + i));
+                        List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
                         TaskState state;
                         Message message = null;
                         Artifact artifact = null;

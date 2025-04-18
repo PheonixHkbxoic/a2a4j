@@ -5,6 +5,7 @@ package cn.pheker.ai.test.server;
 
 import cn.pheker.ai.client.AgentCardResolver;
 import cn.pheker.ai.core.InMemoryTaskManager;
+import cn.pheker.ai.core.PushNotificationSenderAuth;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.server.A2AServer;
 import cn.pheker.ai.server.WebMvcSseServerAdapter;
@@ -34,6 +35,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,14 +57,21 @@ public class WebMvcSseIntegrationTests {
         @Bean
         public AgentCard agentCard() {
             AgentCapabilities capabilities = new AgentCapabilities();
-            AgentSkill skill = AgentSkill.builder().id("convert_currency").name("Currency Exchange Rates Tool").description("Helps with exchange values between various currencies").tags(Arrays.asList("currency conversion", "currency exchange")).examples(Arrays.asList("What is exchange rate between USD and GBP?")).inputModes(Arrays.asList("text")).outputModes(Arrays.asList("text")).build();
+            AgentSkill skill = AgentSkill.builder()
+                    .id("convert_currency").name("Currency Exchange Rates Tool")
+                    .description("Helps with exchange values between various currencies")
+                    .tags(Arrays.asList("currency conversion", "currency exchange"))
+                    .examples(Collections.singletonList("What is exchange rate between USD and GBP?"))
+                    .inputModes(Arrays.asList("text"))
+                    .outputModes(Collections.singletonList("text"))
+                    .build();
             AgentCard agentCard = new AgentCard();
             agentCard.setName("Currency Agent");
             agentCard.setDescription("current exchange");
             agentCard.setUrl(baseUrl);
             agentCard.setVersion("1.0.0");
             agentCard.setCapabilities(capabilities);
-            agentCard.setSkills(Arrays.asList(skill));
+            agentCard.setSkills(Collections.singletonList(skill));
             return agentCard;
         }
 
@@ -77,19 +86,24 @@ public class WebMvcSseIntegrationTests {
 
                 @Override
                 public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-                    return Mono.just(new JsonRpcResponse(request.getId(), new UnsupportedOperationError()));
+                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
                 }
 
                 @Override
                 public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
-                    return Mono.just(new JsonRpcResponse(request.getId(), new UnsupportedOperationError()));
+                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
                 }
             };
         }
 
         @Bean
+        public PushNotificationSenderAuth pushNotificationSenderAuth() {
+            return new PushNotificationSenderAuth();
+        }
+
+        @Bean
         public WebMvcSseServerAdapter webMvcSseServerTransportProvider() {
-            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null);
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null, pushNotificationSenderAuth());
         }
 
         @Bean

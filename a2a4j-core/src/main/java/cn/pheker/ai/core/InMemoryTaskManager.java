@@ -34,10 +34,10 @@ public abstract class InMemoryTaskManager implements TaskManager {
     private final Map<String, PushNotificationConfig> pushNotificationInfos = new HashMap<>();
     private final ConcurrentMap<String, LinkedBlockingQueue<UpdateEvent>> sseEventQueueMap = new ConcurrentHashMap<>();
     private boolean isClosing;
+    private final PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
 
 
     public InMemoryTaskManager() {
-
     }
 
     protected LinkedBlockingQueue<UpdateEvent> initEventQueue(String taskId, boolean resubscribe) {
@@ -62,11 +62,6 @@ public abstract class InMemoryTaskManager implements TaskManager {
             throw new RuntimeException("server is closing");
         }
         queue.offer(updateEvent);
-    }
-
-    @Override
-    public Mono<Void> closeGracefully() {
-        return Mono.fromRunnable(() -> Flux.fromStream(sseEventQueueMap.keySet().stream()).doFirst(() -> isClosing = true).subscribe(sseEventQueueMap::remove));
     }
 
     @Override
@@ -103,8 +98,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
                 .subscribeOn(Schedulers.single());
     }
 
-    @Override
-    public long getRestEventSize(String taskId) {
+    protected long getRestEventSize(String taskId) {
         LinkedBlockingQueue<UpdateEvent> queue = sseEventQueueMap.get(taskId);
         if (queue == null) {
             return -1;
@@ -125,15 +119,6 @@ public abstract class InMemoryTaskManager implements TaskManager {
         return new GetTaskResponse(request.getId(), taskSnapshot);
     }
 
-//    @Override
-//    public SendTaskResponse onSendTask(SendTaskRequest request) {
-//        return new SendTaskResponse(null);
-//    }
-
-//    @Override
-//    public SendTaskStreamingResponse onSendTaskSubscribe(SendTaskStreamingRequest request) {
-//        return null;
-//    }
 
     @Override
     public CancelTaskResponse onCancelTask(CancelTaskRequest request) {
@@ -149,19 +134,16 @@ public abstract class InMemoryTaskManager implements TaskManager {
     public GetTaskPushNotificationResponse onGetTaskPushNotification(GetTaskPushNotificationRequest request) {
         String taskId = request.getParams().getId();
         log.info("Getting task push notification: {}", taskId);
-        lock.lock();
         try {
-            Task task = tasks.get(taskId);
-            if (task == null) {
-                return new GetTaskPushNotificationResponse(taskId, new TaskNotFoundError());
-            }
-            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder().id(taskId).pushNotificationConfig(pushNotificationInfos.get(taskId)).build();
+            PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
+            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
+                    .id(taskId)
+                    .pushNotificationConfig(pushNotificationInfo)
+                    .build();
             return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
         } catch (Exception e) {
             log.error("Getting task push notification exception: {}", e.getMessage());
             return new GetTaskPushNotificationResponse(request.getId(), new InternalError("An error occurred while getting push notification config"));
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -169,28 +151,64 @@ public abstract class InMemoryTaskManager implements TaskManager {
     public SetTaskPushNotificationResponse onSetTaskPushNotification(SetTaskPushNotificationRequest request) {
         String taskId = request.getParams().getId();
         log.info("Setting task push notification: {}", taskId);
-        lock.lock();
         try {
-            Task task = tasks.get(request.getParams().getId());
-            if (task == null) {
-                return new SetTaskPushNotificationResponse(taskId, new TaskNotFoundError());
-            }
-            pushNotificationInfos.put(taskId, request.getParams().getPushNotificationConfig());
+            this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
         } catch (Exception e) {
             log.error("Setting task push notification exception: {}", e.getMessage());
             return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
-        } finally {
-            lock.unlock();
         }
 
         return new SetTaskPushNotificationResponse(taskId, request.getParams());
     }
 
-    @Override
-    public boolean hasPushNotificationInfo(String taskId) {
+    protected boolean hasPushNotificationInfo(String taskId) {
         return pushNotificationInfos.get(taskId) != null;
     }
 
+    protected PushNotificationConfig getPushNotificationInfo(String taskId) {
+        lock.lock();
+        try {
+            Task task = this.tasks.get(taskId);
+            if (task == null) {
+                throw new ValueError("Task not found for " + taskId);
+            }
+            return this.pushNotificationInfos.get(taskId);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    protected void setPushNotificationInfo(String taskId, PushNotificationConfig info) {
+        lock.lock();
+        try {
+            Task task = this.tasks.get(taskId);
+            if (task == null) {
+                throw new ValueError("Task not found for " + taskId);
+            }
+            this.pushNotificationInfos.put(taskId, info);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    protected boolean verifyAndSetPushNotificationInfo(String taskId, PushNotificationConfig info) {
+        boolean verified = PushNotificationSenderAuth.verifyPushNotificationUrl(info.getUrl());
+        if (!verified) {
+            return false;
+        }
+        this.setPushNotificationInfo(taskId, info);
+        return true;
+    }
+
+    protected void sendTaskNotification(Task task) {
+        if (!hasPushNotificationInfo(task.getId())) {
+            log.info("No push notification info found for task: {}", task.getId());
+            return;
+        }
+        PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(task.getId());
+        log.info("Notifying for task: {}, {}", task.getId(), task.getStatus().getState().getState());
+        this.pushNotificationSenderAuth.sendPushNotification(pushNotificationInfo.getUrl(), task);
+    }
 
     protected Task upsertTask(TaskSendParams taskSendParams) {
         log.info("Upserting task: {}", taskSendParams.getId());
@@ -255,5 +273,10 @@ public abstract class InMemoryTaskManager implements TaskManager {
             copy.setHistory(new ArrayList<>());
         }
         return copy;
+    }
+
+    @Override
+    public Mono<Void> closeGracefully() {
+        return Mono.fromRunnable(() -> Flux.fromStream(sseEventQueueMap.keySet().stream()).doFirst(() -> isClosing = true).subscribe(sseEventQueueMap::remove));
     }
 }

@@ -75,11 +75,6 @@ public class ServerSession implements Session {
     }
 
     @Override
-    public long getRestEventSize(String sessionId) {
-        return taskManager.getRestEventSize(sessionId);
-    }
-
-    @Override
     public void close() {
         this.closeGracefully().block();
     }

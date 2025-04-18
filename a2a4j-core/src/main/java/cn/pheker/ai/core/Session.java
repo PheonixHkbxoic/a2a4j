@@ -17,5 +17,4 @@ public interface Session {
 
     void close();
 
-    long getRestEventSize(String sessionId);
 }

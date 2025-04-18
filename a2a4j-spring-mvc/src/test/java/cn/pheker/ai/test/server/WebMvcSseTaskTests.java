@@ -5,6 +5,7 @@ package cn.pheker.ai.test.server;
 
 import cn.pheker.ai.client.A2AClient;
 import cn.pheker.ai.client.AgentCardResolver;
+import cn.pheker.ai.core.PushNotificationSenderAuth;
 import cn.pheker.ai.core.TaskManager;
 import cn.pheker.ai.server.A2AServer;
 import cn.pheker.ai.server.WebMvcSseServerAdapter;
@@ -78,8 +79,13 @@ public class WebMvcSseTaskTests {
         }
 
         @Bean
+        public PushNotificationSenderAuth pushNotificationSenderAuth() {
+            return new PushNotificationSenderAuth();
+        }
+
+        @Bean
         public WebMvcSseServerAdapter webMvcSseServerAdapter() {
-            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null);
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null, pushNotificationSenderAuth());
         }
 
         @Bean
