@@ -6,11 +6,14 @@
 
     <groupId>cn.pheker.ai</groupId>
     <artifactId>a2a4j-parent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <modules>
         <module>a2a4j-core</module>
         <module>a2a4j-spring-mvc</module>
+        <module>a2a4j-agent-mvc-spring-boot-starter</module>
+        <module>a2a4j-host-spring-boot-starter</module>
+        <module>a2a4j-notification-mvc-spring-boot-starter</module>
     </modules>
 
     <properties>
@@ -23,6 +26,7 @@
         <jupiter.version>5.13.0-M2</jupiter.version>
 
         <!-- springboot 2.7.18 -->
+        <springboot.version>2.7.18</springboot.version>
         <springframework.version>5.3.31</springframework.version>
 
         <tomcat.version>8.0.30</tomcat.version>
@@ -93,4 +97,24 @@
         </dependencies>
     </dependencyManagement>
 
+    <build>
+        <plugins>
+
+            <!-- Maven编译插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

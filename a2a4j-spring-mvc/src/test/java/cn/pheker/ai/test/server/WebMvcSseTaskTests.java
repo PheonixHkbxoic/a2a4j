@@ -3,19 +3,19 @@
  */
 package cn.pheker.ai.test.server;
 
-import cn.pheker.ai.client.A2AClient;
-import cn.pheker.ai.client.AgentCardResolver;
-import cn.pheker.ai.core.PushNotificationSenderAuth;
-import cn.pheker.ai.core.TaskManager;
-import cn.pheker.ai.server.A2AServer;
-import cn.pheker.ai.server.WebMvcSseServerAdapter;
-import cn.pheker.ai.spec.entity.*;
-import cn.pheker.ai.spec.error.JsonRpcError;
-import cn.pheker.ai.spec.error.TaskNotFoundError;
-import cn.pheker.ai.spec.message.GetTaskResponse;
-import cn.pheker.ai.spec.message.SendTaskResponse;
-import cn.pheker.ai.util.Util;
-import cn.pheker.ai.util.Uuid;
+import cn.pheker.ai.a2a4j.core.client.A2AClient;
+import cn.pheker.ai.a2a4j.core.client.AgentCardResolver;
+import cn.pheker.ai.a2a4j.core.core.PushNotificationSenderAuth;
+import cn.pheker.ai.a2a4j.core.core.TaskManager;
+import cn.pheker.ai.a2a4j.core.server.A2AServer;
+import cn.pheker.ai.a2a4j.core.spec.entity.*;
+import cn.pheker.ai.a2a4j.core.spec.error.JsonRpcError;
+import cn.pheker.ai.a2a4j.core.spec.error.TaskNotFoundError;
+import cn.pheker.ai.a2a4j.core.spec.message.GetTaskResponse;
+import cn.pheker.ai.a2a4j.core.spec.message.SendTaskResponse;
+import cn.pheker.ai.a2a4j.core.util.Util;
+import cn.pheker.ai.a2a4j.core.util.Uuid;
+import cn.pheker.ai.a2a4j.mvc.WebMvcSseServerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -75,7 +75,7 @@ public class WebMvcSseTaskTests {
 
         @Bean
         public TaskManager taskManager() {
-            return new EchoTaskManager(echoAgent());
+            return new EchoTaskManager(echoAgent(), pushNotificationSenderAuth());
         }
 
         @Bean
@@ -209,14 +209,14 @@ public class WebMvcSseTaskTests {
         SendTaskResponse taskResponse = client.sendTask(params);
         assertThat(taskResponse).isNotNull();
         assertThat(taskResponse.getError()).isNull();
-        log.info("taskResponse: {}", Util.json(taskResponse));
+        log.info("taskResponse: {}", Util.toJson(taskResponse));
 
         TaskQueryParams q = new TaskQueryParams();
         q.setId(params.getId());
         q.setHistoryLength(3);
         GetTaskResponse getTaskResponse = client.getTask(q);
         assertThat(getTaskResponse).isNotNull();
-        log.info("getTaskResponse: {}", Util.json(getTaskResponse));
+        log.info("getTaskResponse: {}", Util.toJson(getTaskResponse));
     }
 
     @Test
@@ -230,7 +230,7 @@ public class WebMvcSseTaskTests {
         client.sendTaskSubscribe(params)
                 .doOnError(System.err::println)
                 .subscribe(r -> {
-                    log.info("response {}", Util.json(r));
+                    log.info("response {}", Util.toJson(r));
                 });
         System.out.println("over " + params.getId());
     }
@@ -247,7 +247,7 @@ public class WebMvcSseTaskTests {
         client.sendTaskSubscribe(params)
                 .doOnError(System.err::println)
                 .subscribe(r -> {
-                    log.info("response1 {}", Util.json(r));
+                    log.info("response1 {}", Util.toJson(r));
                 });
         System.out.println("over1 " + params.getId());
 
@@ -256,7 +256,7 @@ public class WebMvcSseTaskTests {
         client.sendTaskResubscribe(ps)
                 .doOnError(System.err::println)
                 .subscribe(r -> {
-                    log.info("response2 {}", Util.json(r));
+                    log.info("response2 {}", Util.toJson(r));
                 });
         System.out.println("over2 " + params.getId());
     }
@@ -268,7 +268,7 @@ public class WebMvcSseTaskTests {
         client.sendTaskResubscribe(params)
                 .doOnError(System.out::println)
                 .subscribe(r -> {
-                    log.info("response {}", Util.json(r));
+                    log.info("response {}", Util.toJson(r));
                 });
         System.out.println("over " + params.getId());
     }

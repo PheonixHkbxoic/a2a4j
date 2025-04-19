@@ -3,18 +3,18 @@
  */
 package cn.pheker.ai.test.server;
 
-import cn.pheker.ai.client.AgentCardResolver;
-import cn.pheker.ai.core.InMemoryTaskManager;
-import cn.pheker.ai.core.PushNotificationSenderAuth;
-import cn.pheker.ai.core.TaskManager;
-import cn.pheker.ai.server.A2AServer;
-import cn.pheker.ai.server.WebMvcSseServerAdapter;
-import cn.pheker.ai.spec.entity.AgentCapabilities;
-import cn.pheker.ai.spec.entity.AgentCard;
-import cn.pheker.ai.spec.entity.AgentSkill;
-import cn.pheker.ai.spec.entity.Task;
-import cn.pheker.ai.spec.error.UnsupportedOperationError;
-import cn.pheker.ai.spec.message.*;
+import cn.pheker.ai.a2a4j.core.client.AgentCardResolver;
+import cn.pheker.ai.a2a4j.core.core.InMemoryTaskManager;
+import cn.pheker.ai.a2a4j.core.core.PushNotificationSenderAuth;
+import cn.pheker.ai.a2a4j.core.core.TaskManager;
+import cn.pheker.ai.a2a4j.core.server.A2AServer;
+import cn.pheker.ai.a2a4j.core.spec.entity.AgentCapabilities;
+import cn.pheker.ai.a2a4j.core.spec.entity.AgentCard;
+import cn.pheker.ai.a2a4j.core.spec.entity.AgentSkill;
+import cn.pheker.ai.a2a4j.core.spec.entity.Task;
+import cn.pheker.ai.a2a4j.core.spec.error.UnsupportedOperationError;
+import cn.pheker.ai.a2a4j.core.spec.message.*;
+import cn.pheker.ai.a2a4j.mvc.WebMvcSseServerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;

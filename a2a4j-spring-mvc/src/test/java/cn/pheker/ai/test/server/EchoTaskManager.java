@@ -1,12 +1,13 @@
 package cn.pheker.ai.test.server;
 
-import cn.pheker.ai.core.InMemoryTaskManager;
-import cn.pheker.ai.spec.ValueError;
-import cn.pheker.ai.spec.entity.*;
-import cn.pheker.ai.spec.error.InternalError;
-import cn.pheker.ai.spec.error.InvalidParamsError;
-import cn.pheker.ai.spec.message.*;
-import cn.pheker.ai.util.Util;
+import cn.pheker.ai.a2a4j.core.core.InMemoryTaskManager;
+import cn.pheker.ai.a2a4j.core.core.PushNotificationSenderAuth;
+import cn.pheker.ai.a2a4j.core.spec.ValueError;
+import cn.pheker.ai.a2a4j.core.spec.entity.*;
+import cn.pheker.ai.a2a4j.core.spec.error.InternalError;
+import cn.pheker.ai.a2a4j.core.spec.error.InvalidParamsError;
+import cn.pheker.ai.a2a4j.core.spec.message.*;
+import cn.pheker.ai.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -29,9 +30,10 @@ public class EchoTaskManager extends InMemoryTaskManager {
     // agent support modes
     private final List<String> supportModes = Arrays.asList("text", "file", "data");
 
-    public EchoTaskManager(EchoAgent agent) {
+    public EchoTaskManager(EchoAgent agent, PushNotificationSenderAuth pushNotificationSenderAuth) {
         super();
         this.agent = agent;
+        this.pushNotificationSenderAuth = pushNotificationSenderAuth;
     }
 
     @Override
@@ -45,7 +47,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
         }
         // check and set pushNotification
         if (ps.getPushNotification() != null) {
-            boolean verified = this.verifyAndSetPushNotificationInfo(ps.getId(), ps.getPushNotification());
+            boolean verified = this.verifyPushNotificationInfo(ps.getId(), ps.getPushNotification());
             if (!verified) {
                 return new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid"));
             }
@@ -81,7 +83,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
             }
             // check and set pushNotification
             if (ps.getPushNotification() != null) {
-                boolean verified = this.verifyAndSetPushNotificationInfo(ps.getId(), ps.getPushNotification());
+                boolean verified = this.verifyPushNotificationInfo(ps.getId(), ps.getPushNotification());
                 if (!verified) {
                     return Mono.just(new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid")));
                 }
