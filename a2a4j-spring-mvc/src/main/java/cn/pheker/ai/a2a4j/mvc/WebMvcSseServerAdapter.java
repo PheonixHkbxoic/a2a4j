@@ -19,6 +19,7 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import javax.validation.ValidationException;
 import javax.validation.Validator;
@@ -165,6 +166,8 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
 
             // sse handle
             taskManager.dequeueEvent(taskId)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(sseBuilder::error)
                     .subscribe(updateEvent -> {
                         log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
                         this.sendMessage(sseBuilder, taskId, new SendTaskStreamingResponse(request.getId(), updateEvent));

@@ -42,8 +42,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Slf4j
 public class WebMvcSseTaskTests {
 
-    private static final String baseUrl = "http://localhost:8080/";
     private static final int PORT = 8080;
+    private static final String baseUrl = "http://localhost:" + PORT;
 
 
     private static AgentCard agentCard;

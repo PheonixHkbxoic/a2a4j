@@ -11,7 +11,6 @@ import cn.pheker.ai.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,18 +83,14 @@ public abstract class InMemoryTaskManager implements TaskManager {
                         }
                     } catch (InterruptedException e) {
                         sink.error(e);
-                        throw new RuntimeException(e);
                     }
                 })
-                .publishOn(Schedulers.single())
-//                .doOnError(e -> {
-//                    log.error("dequeueEvent taskId: {}, error: {}", taskId, e.getMessage());
-//                    sseEventQueueMap.remove(taskId);
-//                })
                 .doOnComplete(() -> {
                     sseEventQueueMap.remove(taskId);
                 })
-                .subscribeOn(Schedulers.single());
+                .doOnError(e -> {
+                    log.error("dequeueEvent taskId: {}, restEventSize: {}, error: {}", taskId, getRestEventSize(taskId), e.getMessage(), e);
+                });
     }
 
     protected long getRestEventSize(String taskId) {
@@ -196,6 +191,10 @@ public abstract class InMemoryTaskManager implements TaskManager {
     }
 
     protected void sendTaskNotification(Task task) {
+        if (this.pushNotificationSenderAuth == null) {
+            log.warn("PushNotificationSenderAuth not be set");
+            return;
+        }
         if (!hasPushNotificationInfo(task.getId())) {
             log.info("No push notification info found for task: {}", task.getId());
             return;

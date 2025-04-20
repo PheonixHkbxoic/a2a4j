@@ -126,34 +126,41 @@ public class A2AClient {
             log.debug("isSse: {}, contentType: {}", isSse, entity.getContentType().toString());
             if (isSse) {
                 return Flux.<SendTaskStreamingResponse>create(sink -> {
-                    reader.onEvent(sseEvent -> {
-                        log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
-                        if (!sseEvent.hasData()) {
-                            return;
-                        }
-                        SendTaskStreamingResponse sendTaskStreamingResponse;
-                        try {
-                            sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-                        sink.next(sendTaskStreamingResponse);
-                        UpdateEvent event = sendTaskStreamingResponse.getResult();
-                        if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
-                            sink.complete();
-                        }
-                    }, e -> {
-                        log.warn("doSendRequestForSse exception: {}", e.getMessage());
-                        sink.error(e);
-                    });
-                }).doOnComplete(() -> {
-                    try {
-                        buf.close();
-                        response.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                            reader.onEvent(sseEvent -> {
+                                log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
+                                if (!sseEvent.hasData()) {
+                                    return;
+                                }
+                                SendTaskStreamingResponse sendTaskStreamingResponse;
+                                try {
+                                    sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
+                                } catch (JsonProcessingException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                sink.next(sendTaskStreamingResponse);
+                                UpdateEvent event = sendTaskStreamingResponse.getResult();
+                                if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
+                                    sink.complete();
+                                }
+                            }, sink::error);
+                        })
+                        .doOnError(e -> {
+                            log.warn("doSendRequestForSse exception: {}", e.getMessage());
+                            try {
+                                buf.close();
+                                response.close();
+                            } catch (IOException ignored) {
+
+                            }
+                        })
+                        .doOnComplete(() -> {
+                            try {
+                                buf.close();
+                                response.close();
+                            } catch (IOException ignored) {
+
+                            }
+                        });
             }
 
             // non sse

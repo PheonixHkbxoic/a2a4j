@@ -22,7 +22,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
@@ -105,7 +104,7 @@ public class PushNotificationSenderAuth extends PushNotificationAuth {
             }
 //            log.info("Push-notification sent for URL: {}, token: {}, data: {}", url, token, json);
             log.info("Push-notification sent for URL: {}", url);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.warn("Error during sending push-notification for URL: {}, token: {}", url, token);
         }
     }

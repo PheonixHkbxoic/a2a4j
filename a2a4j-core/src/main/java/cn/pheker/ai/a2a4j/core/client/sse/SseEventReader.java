@@ -56,6 +56,7 @@ public class SseEventReader {
                         break;
                 }
             }
+            reader.close();
         } catch (IOException e) {
             onError.accept(e);
         } finally {

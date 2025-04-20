@@ -113,40 +113,43 @@ public class EchoTaskManager extends InMemoryTaskManager {
         String prompts = getUserQuery(params);
 
         // TODO simulate agent token stream and enqueue
-        Flux.range(1, 10).subscribeOn(Schedulers.single()).subscribe(i -> {
-            List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
-            TaskState state;
-            Message message = null;
-            Artifact artifact = null;
-            boolean finalFlag = false;
-            if (i == 10) {
-                state = TaskState.COMPLETED;
-                finalFlag = true;
-                artifact = new Artifact(parts, 0, false);
-            } else if (i == 5) {
-                state = TaskState.INPUT_REQUIRED;
-                message = new Message(Role.AGENT, parts, null);
-                finalFlag = true;
-            } else {
-                state = TaskState.WORKING;
-                message = new Message(Role.AGENT, parts, null);
-            }
+        // keep multi turn conversation with sessionId
+        Flux.range(1, 10)
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe(i -> {
+                    List<Part> parts = Collections.singletonList(new TextPart("sse message: " + i));
+                    TaskState state;
+                    Message message = null;
+                    Artifact artifact = null;
+                    boolean finalFlag = false;
+                    if (i == 10) {
+                        state = TaskState.COMPLETED;
+                        finalFlag = true;
+                        artifact = new Artifact(parts, 0, false);
+                    } else if (i == 5) {
+                        state = TaskState.INPUT_REQUIRED;
+                        message = new Message(Role.AGENT, parts, null);
+                        finalFlag = true;
+                    } else {
+                        state = TaskState.WORKING;
+                        message = new Message(Role.AGENT, parts, null);
+                    }
 
-            TaskStatus taskStatus = new TaskStatus(state, message);
-            Task latestTask = this.updateStore(taskId, taskStatus, Collections.singletonList(artifact));
-            // send notification
-            this.sendTaskNotification(latestTask);
+                    TaskStatus taskStatus = new TaskStatus(state, message);
+                    Task latestTask = this.updateStore(taskId, taskStatus, Collections.singletonList(artifact));
+                    // send notification
+                    this.sendTaskNotification(latestTask);
 
-            // artifact event
-            if (artifact != null) {
-                TaskArtifactUpdateEvent taskArtifactUpdateEvent = new TaskArtifactUpdateEvent(taskId, artifact);
-                this.enqueueEvent(taskId, taskArtifactUpdateEvent);
-            }
+                    // artifact event
+                    if (artifact != null) {
+                        TaskArtifactUpdateEvent taskArtifactUpdateEvent = new TaskArtifactUpdateEvent(taskId, artifact);
+                        this.enqueueEvent(taskId, taskArtifactUpdateEvent);
+                    }
 
-            // status event
-            TaskStatusUpdateEvent taskStatusUpdateEvent = new TaskStatusUpdateEvent(taskId, taskStatus, finalFlag);
-            this.enqueueEvent(taskId, taskStatusUpdateEvent);
-        });
+                    // status event
+                    TaskStatusUpdateEvent taskStatusUpdateEvent = new TaskStatusUpdateEvent(taskId, taskStatus, finalFlag);
+                    this.enqueueEvent(taskId, taskStatusUpdateEvent);
+                });
     }
 
     @Override

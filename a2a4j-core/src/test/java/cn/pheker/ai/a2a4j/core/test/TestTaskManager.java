@@ -1,13 +1,17 @@
 package cn.pheker.ai.a2a4j.core.test;
 
+import cn.pheker.ai.a2a4j.core.core.InMemoryTaskManager;
 import cn.pheker.ai.a2a4j.core.spec.entity.*;
-import cn.pheker.ai.a2a4j.core.spec.message.SendTaskRequest;
-import cn.pheker.ai.a2a4j.core.spec.message.SendTaskResponse;
+import cn.pheker.ai.a2a4j.core.spec.message.*;
 import cn.pheker.ai.a2a4j.core.util.Uuid;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -47,4 +51,63 @@ public class TestTaskManager {
                 .map(p -> ((TextPart) p).getText())
                 .collect(Collectors.joining()));
     }
+
+    @Test
+    public void testQueue() {
+        InMemoryTaskManager manager = new InMemoryTaskManager() {
+            @Override
+            public SendTaskResponse onSendTask(SendTaskRequest request) {
+                return null;
+            }
+
+            @Override
+            public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+                final String taskId = Uuid.uuid4hex();
+                this.initEventQueue(taskId, false);
+
+                log.info("enqueue flux push before: {}", taskId);
+                Flux.<Integer>push(sink -> {
+                            for (int i = 0; i < 10; i++) {
+                                sink.next(i + 1);
+//                                try {
+//                                    TimeUnit.MILLISECONDS.sleep(500);
+//                                } catch (InterruptedException e) {
+//                                    throw new RuntimeException(e);
+//                                }
+                            }
+                            sink.complete();
+                        })
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(n -> {
+                            log.info("enqueue n: {}", n);
+                            TaskStatusUpdateEvent e = new TaskStatusUpdateEvent(new TaskStatus(TaskState.WORKING), n == 10);
+                            e.setMetadata(Collections.singletonMap("n", n));
+                            this.enqueueEvent(taskId, e);
+                        });
+                log.info("enqueue flux subscribe after: {}", taskId);
+
+                this.dequeueEvent(taskId)
+                        .subscribe(e -> {
+                            log.info("dequeue subscribe, n: {}", e.getMetadata().get("n"));
+                        });
+                log.info("dequeue flux subscribe after: {}", taskId);
+
+                try {
+                    TimeUnit.SECONDS.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            }
+
+            @Override
+            public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+                return null;
+            }
+        };
+
+        manager.onSendTaskSubscribe(null);
+    }
+
+
 }
