@@ -80,7 +80,7 @@ A2A 协议有三个参与者：
 ```xml
 
 <dependency>
-    <groupId>cn.pheker.ai</groupId>
+    <groupId>io.github.PheonixHkbxoic</groupId>
     <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -197,7 +197,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
 ```xml
 
 <dependency>
-    <groupId>cn.pheker.ai</groupId>
+    <groupId>io.github.PheonixHkbxoic</groupId>
     <artifactId>a2a4j-host-spring-boot-starter</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -272,7 +272,7 @@ public class AgentController {
 ```xml
 
 <dependency>
-    <groupId>cn.pheker.ai</groupId>
+    <groupId>io.github.PheonixHkbxoic</groupId>
     <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
     <version>1.0.0</version>
 </dependency>

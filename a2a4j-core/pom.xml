@@ -2,13 +2,18 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>cn.pheker.ai</groupId>
+        <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../a2a4j-parent/pom.xml</relativePath>
     </parent>
+    
     <artifactId>a2a4j-core</artifactId>
     <packaging>jar</packaging>
 
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>a2a4j-core</description>
+    <url>http://github.com/PheonixHkbxoic/a2a4j</url>
 
     <dependencies>
         <dependency>

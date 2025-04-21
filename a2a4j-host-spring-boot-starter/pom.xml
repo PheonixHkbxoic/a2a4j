@@ -2,16 +2,18 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>cn.pheker.ai</groupId>
+        <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../a2a4j-parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>a2a4j-host-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
 
-    <name>a2a4j-host-spring-boot-starter</name>
-    <url>http://maven.apache.org</url>
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>a2a4j-host-spring-boot-starter</description>
+    <url>http://github.com/PheonixHkbxoic/a2a4j</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -24,7 +26,7 @@
             <version>${springboot.version}</version>
         </dependency>
         <dependency>
-            <groupId>cn.pheker.ai</groupId>
+            <groupId>io.github.PheonixHkbxoic</groupId>
             <artifactId>a2a4j-core</artifactId>
             <version>1.0.0</version>
         </dependency>

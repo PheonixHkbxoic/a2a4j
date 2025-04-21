@@ -1,19 +1,24 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>cn.pheker.ai</groupId>
+        <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j-parent</artifactId>
         <version>1.0.0</version>
-        <relativePath>../pom.xml</relativePath>
+        <relativePath>../a2a4j-parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>a2a4j-spring-mvc</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>a2a4j-spring-mvc</description>
+    <url>http://github.com/PheonixHkbxoic/a2a4j</url>
+
+
     <dependencies>
         <dependency>
-            <groupId>cn.pheker.ai</groupId>
+            <groupId>io.github.PheonixHkbxoic</groupId>
             <artifactId>a2a4j-core</artifactId>
             <version>1.0.0</version>
         </dependency>
