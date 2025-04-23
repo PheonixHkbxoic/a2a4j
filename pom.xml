@@ -20,6 +20,7 @@
         <module>a2a4j-host-spring-boot-starter</module>
         <module>a2a4j-notification-mvc-spring-boot-starter</module>
         <module>a2a4j-parent</module>
+        <module>a2a4j-servlet</module>
     </modules>
 
 

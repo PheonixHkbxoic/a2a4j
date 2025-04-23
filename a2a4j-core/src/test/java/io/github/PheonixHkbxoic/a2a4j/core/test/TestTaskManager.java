@@ -1,6 +1,7 @@
 package io.github.PheonixHkbxoic.a2a4j.core.test;
 
 import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
 import io.github.PheonixHkbxoic.a2a4j.core.util.Uuid;
@@ -24,7 +25,7 @@ public class TestTaskManager {
     @Test
     public void testEchoTaskManager() {
         EchoAgent agent = new EchoAgent();
-        EchoTaskManager echo = new EchoTaskManager(agent);
+        EchoTaskManager echo = new EchoTaskManager(agent, new PushNotificationSenderAuth());
 
         SendTaskRequest request = new SendTaskRequest();
         Map<String, Object> metadata = new HashMap<String, Object>() {{

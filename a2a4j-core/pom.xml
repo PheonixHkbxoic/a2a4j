@@ -7,7 +7,7 @@
         <version>1.0.0</version>
         <relativePath>../a2a4j-parent/pom.xml</relativePath>
     </parent>
-    
+
     <artifactId>a2a4j-core</artifactId>
     <packaging>jar</packaging>
 
@@ -46,24 +46,19 @@
         </dependency>
 
 
-        <!-- Used by the HttpServletSseServerTransport -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <version>${jakarta.servlet.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Tomcat dependencies for testing -->
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
+
 
         <!-- Apache HttpClient依赖 -->
         <dependency>
@@ -78,5 +73,7 @@
             <artifactId>nimbus-jose-jwt</artifactId>
             <version>10.2</version>
         </dependency>
+
+
     </dependencies>
 </project>

@@ -253,7 +253,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
      *
      * @param task
      * @param historyLength
-     * @return
+     * @return Task snapshot
      */
     protected Task appendTaskHistory(Task task, @Nullable Integer historyLength) {
         Task copy = Util.deepCopyJson(task, Task.class);

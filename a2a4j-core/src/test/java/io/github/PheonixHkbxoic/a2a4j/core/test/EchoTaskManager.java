@@ -1,6 +1,7 @@
 package io.github.PheonixHkbxoic.a2a4j.core.test;
 
 import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidParamsError;
@@ -26,8 +27,9 @@ public class EchoTaskManager extends InMemoryTaskManager {
     // agent support modes
     private final List<String> supportModes = Arrays.asList("text", "file", "data");
 
-    public EchoTaskManager(EchoAgent agent) {
+    public EchoTaskManager(EchoAgent agent, PushNotificationSenderAuth pushNotificationSenderAuth) {
         this.agent = agent;
+        this.pushNotificationSenderAuth = pushNotificationSenderAuth;
     }
 
     @Override
