@@ -58,6 +58,7 @@ A2A 协议有三个参与者：
 
 - [x] support jdk8, SpringBoot 2.7.18
 - [x] support spring mvc, reactor, sse
+- [x] support servlet and sse
 - [ ] support more LLM, eg.LangChain
 - [ ] support jdk17, SpringBoot 3.X
 - [ ] more a2a4j example project

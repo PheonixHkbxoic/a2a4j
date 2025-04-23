@@ -1,5 +1,8 @@
 package io.github.PheonixHkbxoic.a2a4j.mvc;
 
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.PheonixHkbxoic.a2a4j.core.core.ServerAdapter;
 import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
@@ -7,9 +10,6 @@ import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +78,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
 
     @Override
     public Mono<Void> closeGracefully() {
+        this.isClosing = true;
         return this.taskManager.closeGracefully();
     }
 
