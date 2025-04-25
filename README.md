@@ -59,6 +59,7 @@ A2A 协议有三个参与者：
 - [x] support jdk8, SpringBoot 2.7.18
 - [x] support spring mvc, reactor, sse
 - [x] support servlet and sse
+- [x] support webflux and sse
 - [ ] support more LLM, eg.LangChain
 - [ ] support jdk17, SpringBoot 3.X
 - [ ] more a2a4j example project
@@ -127,26 +128,36 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public SendTaskResponse onSendTask(SendTaskRequest request) {
+    public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
         log.info("onSendTask request: {}", request);
         TaskSendParams ps = request.getParams();
-        // 1. check request params
+        // 1. check
+        JsonRpcResponse<Object> error = this.validRequest(request);
+        if (error != null) {
+            return Mono.just(new SendTaskResponse(request.getId(), error.getError()));
+        }
+        // check pushNotification
 
-        // 2. save task
+        // save
+        this.upsertTask(ps);
+        this.updateStore(ps.getId(), new TaskStatus(TaskState.WORKING), null);
+
+        // send task notification
 
         // 2. agent invoke
-        List<Artifact> artifacts = this.agentInvoke(ps).block();
+        log.info("sessionId: {}", ps.getSessionId());
+        return this.agentInvoke(ps).map(artifacts -> {
+            Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
 
-        // 4. save and notification
-        Task taskCompleted = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
-        this.sendTaskNotification(taskCompleted);
+            // handle agent response
+            this.appendTaskHistory(task, 3);
 
-        Task taskSnapshot = this.appendTaskHistory(taskCompleted, 3);
-        return new SendTaskResponse(taskSnapshot);
+            return new SendTaskResponse(task);
+        });
     }
 
     @Override
-    public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
         return Mono.fromCallable(() -> {
             log.info("onSendTaskSubscribe request: {}", request);
             TaskSendParams ps = request.getParams();
@@ -157,13 +168,13 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
         TaskIdParams params = request.getParams();
         try {
             this.initEventQueue(params.getId(), true);
         } catch (Exception e) {
             log.error("Error while reconnecting to SSE stream: {}", e.getMessage());
-            return Mono.just(new JsonRpcResponse(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
+            return Mono.just(new JsonRpcResponse<>(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
         }
         return Mono.empty();
     }
