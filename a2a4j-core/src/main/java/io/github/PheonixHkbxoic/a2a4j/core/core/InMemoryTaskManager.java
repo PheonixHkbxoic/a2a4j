@@ -1,13 +1,13 @@
-package io.github.PheonixHkbxoic.a2a4j.core.core;
+package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.Nullable;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InternalError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.TaskNotCancelableError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.TaskNotCancelableError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -83,12 +83,8 @@ public abstract class InMemoryTaskManager implements TaskManager {
                         sink.error(e);
                     }
                 })
-                .doOnComplete(() -> {
-                    sseEventQueueMap.remove(taskId);
-                })
-                .doOnError(e -> {
-                    log.error("dequeueEvent taskId: {}, restEventSize: {}, error: {}", taskId, getRestEventSize(taskId), e.getMessage(), e);
-                });
+                .doOnComplete(() -> sseEventQueueMap.remove(taskId))
+                .doOnError(e -> log.error("dequeueEvent taskId: {}, restEventSize: {}, error: {}", taskId, getRestEventSize(taskId), e.getMessage(), e));
     }
 
     protected long getRestEventSize(String taskId) {
@@ -100,58 +96,66 @@ public abstract class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public GetTaskResponse onGetTask(GetTaskRequest request) {
-        log.info("Getting task {}", request.getParams().getId());
+    public Mono<GetTaskResponse> onGetTask(GetTaskRequest request) {
+        return Mono.fromSupplier(() -> {
+            log.info("Getting task {}", request.getParams().getId());
 
-        Task task = this.tasks.get(request.getParams().getId());
-        if (task == null) {
-            return new GetTaskResponse(request.getId(), new TaskNotFoundError());
-        }
+            Task task = this.tasks.get(request.getParams().getId());
+            if (task == null) {
+                return new GetTaskResponse(request.getId(), new TaskNotFoundError());
+            }
 
-        Task taskSnapshot = this.appendTaskHistory(task, request.getParams().getHistoryLength());
-        return new GetTaskResponse(request.getId(), taskSnapshot);
+            Task taskSnapshot = this.appendTaskHistory(task, request.getParams().getHistoryLength());
+            return new GetTaskResponse(request.getId(), taskSnapshot);
+        });
     }
 
 
     @Override
-    public CancelTaskResponse onCancelTask(CancelTaskRequest request) {
-        log.info("Cancelling task: {}", request.getParams().getId());
-        Task task = tasks.get(request.getParams().getId());
-        if (task == null) {
-            return new CancelTaskResponse(request.getId(), new TaskNotFoundError());
-        }
-        return new CancelTaskResponse(request.getId(), new TaskNotCancelableError());
+    public Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request) {
+        return Mono.fromSupplier(() -> {
+            log.info("Cancelling task: {}", request.getParams().getId());
+            Task task = tasks.get(request.getParams().getId());
+            if (task == null) {
+                return new CancelTaskResponse(request.getId(), new TaskNotFoundError());
+            }
+            return new CancelTaskResponse(request.getId(), new TaskNotCancelableError());
+        });
     }
 
     @Override
-    public GetTaskPushNotificationResponse onGetTaskPushNotification(GetTaskPushNotificationRequest request) {
-        String taskId = request.getParams().getId();
-        log.info("Getting task push notification: {}", taskId);
-        try {
-            PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
-            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
-                    .id(taskId)
-                    .pushNotificationConfig(pushNotificationInfo)
-                    .build();
-            return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
-        } catch (Exception e) {
-            log.error("Getting task push notification exception: {}", e.getMessage());
-            return new GetTaskPushNotificationResponse(request.getId(), new InternalError("An error occurred while getting push notification config"));
-        }
+    public Mono<GetTaskPushNotificationResponse> onGetTaskPushNotification(GetTaskPushNotificationRequest request) {
+        return Mono.fromSupplier(() -> {
+            String taskId = request.getParams().getId();
+            log.info("Getting task push notification: {}", taskId);
+            try {
+                PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
+                TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
+                        .id(taskId)
+                        .pushNotificationConfig(pushNotificationInfo)
+                        .build();
+                return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
+            } catch (Exception e) {
+                log.error("Getting task push notification exception: {}", e.getMessage());
+                return new GetTaskPushNotificationResponse(request.getId(), new InternalError("An error occurred while getting push notification config"));
+            }
+        });
     }
 
     @Override
-    public SetTaskPushNotificationResponse onSetTaskPushNotification(SetTaskPushNotificationRequest request) {
-        String taskId = request.getParams().getId();
-        log.info("Setting task push notification: {}", taskId);
-        try {
-            this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
-        } catch (Exception e) {
-            log.error("Setting task push notification exception: {}", e.getMessage());
-            return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
-        }
+    public Mono<SetTaskPushNotificationResponse> onSetTaskPushNotification(SetTaskPushNotificationRequest request) {
+        return Mono.fromSupplier(() -> {
+            String taskId = request.getParams().getId();
+            log.info("Setting task push notification: {}", taskId);
+            try {
+                this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
+            } catch (Exception e) {
+                log.error("Setting task push notification exception: {}", e.getMessage());
+                return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
+            }
 
-        return new SetTaskPushNotificationResponse(taskId, request.getParams());
+            return new SetTaskPushNotificationResponse(taskId, request.getParams());
+        });
     }
 
     protected boolean hasPushNotificationInfo(String taskId) {
@@ -251,8 +255,8 @@ public abstract class InMemoryTaskManager implements TaskManager {
     /**
      * 获取task快照，并返回最多historyLength条历史消息
      *
-     * @param task
-     * @param historyLength
+     * @param task          the task to copy
+     * @param historyLength return history length
      * @return Task snapshot
      */
     protected Task appendTaskHistory(Task task, @Nullable Integer historyLength) {

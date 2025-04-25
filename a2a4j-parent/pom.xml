@@ -23,16 +23,23 @@
         <jackson.version>2.18.3</jackson.version>
         <logback.version>1.2.11</logback.version>
         <jupiter.version>5.13.0-M2</jupiter.version>
+        <mockito.version>5.14.2</mockito.version>
 
         <!-- springboot 2.7.18 -->
         <springboot.version>2.7.18</springboot.version>
         <springframework.version>5.3.31</springframework.version>
 
         <tomcat.version>8.0.30</tomcat.version>
-        <jakarta.servlet.version>5.0.0</jakarta.servlet.version>
-        <reactor.version>3.7.0</reactor.version>
-        <reactor.http.version>1.2.0</reactor.http.version>
+        <!--        <jakarta.servlet.version>5.0.0</jakarta.servlet.version>-->
+        <servlet.version>3.1.0</servlet.version>
+        <validation.version>1.1.0.Final</validation.version>
+        <validator.version>6.2.5.Final</validator.version>
+        <reactor.version>3.4.34</reactor.version>
+        <reactor.http.version>1.0.39</reactor.http.version>
         <assertj.version>3.26.3</assertj.version>
+
+        <httpclient.version>4.5.13</httpclient.version>
+        <jose.verson>10.2</jose.verson>
     </properties>
 
     <dependencyManagement>
@@ -59,6 +66,8 @@
                 <artifactId>logback-classic</artifactId>
                 <version>${logback.version}</version>
             </dependency>
+
+            <!-- reactive stream -->
             <dependency>
                 <groupId>io.projectreactor.netty</groupId>
                 <artifactId>reactor-netty-http</artifactId>
@@ -70,10 +79,13 @@
                 <version>${reactor.version}</version>
                 <scope>test</scope>
             </dependency>
+
+            <!-- tomcat -->
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-core</artifactId>
                 <version>${tomcat.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
@@ -88,6 +100,7 @@
                 <scope>provided</scope>
             </dependency>
 
+            <!-- test -->
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
@@ -98,11 +111,70 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>${jupiter.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>${servlet.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${validation.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.validator</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>${validator.version}</version>
+            </dependency>
+
+
+            <!-- spring -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-context</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.springframework</groupId>
-                <artifactId>spring-framework-bom</artifactId>
+                <artifactId>spring-test</artifactId>
                 <version>${springframework.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webflux</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+
+
+            <!-- other -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${jose.verson}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,9 +1,9 @@
-package io.github.PheonixHkbxoic.a2a4j.mvc;
+package io.github.pheonixhkbxoic.a2a4j.mvc;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -11,8 +11,6 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
-import javax.servlet.ServletException;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,7 +59,7 @@ public abstract class WebMvcNotificationAdapter {
                 return ServerResponse.badRequest().body("push notification verification failed, authorization: " + authorization);
             }
             log.info("push notification received, authorization: {}, data: {}", authorization, Util.toJson(data));
-        } catch (ServletException | IOException e) {
+        } catch (Exception e) {
             log.error("error verifying push notification, authorization: {}, error: {}", authorization, e.getMessage(), e);
         }
         return ServerResponse.ok().build();

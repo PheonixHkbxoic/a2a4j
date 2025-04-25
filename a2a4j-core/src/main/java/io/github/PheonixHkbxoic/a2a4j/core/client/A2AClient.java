@@ -1,14 +1,14 @@
-package io.github.PheonixHkbxoic.a2a4j.core.client;
+package io.github.pheonixhkbxoic.a2a4j.core.client;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.PheonixHkbxoic.a2a4j.core.client.sse.SseEventReader;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.A2AClientHTTPError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.A2AClientJSONError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.client.sse.SseEventReader;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientHTTPError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientJSONError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.agent.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.agent.mvc.autoconfiguration;
 
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +16,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  */
 @ConditionalOnClass(value = {AgentCard.class, TaskManager.class})
 @Configuration
-public class A2a4jAgentAutoConfiguration {
+public class A2a4jAgentMvcAutoConfiguration {
 
     @Bean
     public PushNotificationSenderAuth pushNotificationSenderAuth() {

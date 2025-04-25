@@ -1,12 +1,12 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidParamsError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidParamsError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,13 +33,13 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public SendTaskResponse onSendTask(SendTaskRequest request) {
-        log.info("request: {}", request);
+    public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
+        log.info("onSendTask request: {}", request);
         TaskSendParams ps = request.getParams();
         // 1. check
         JsonRpcResponse<Object> error = this.validRequest(request);
         if (error != null) {
-            return new SendTaskResponse(request.getId(), error.getError());
+            return Mono.just(new SendTaskResponse(request.getId(), error.getError()));
         }
         // check pushNotification
 
@@ -51,19 +51,20 @@ public class EchoTaskManager extends InMemoryTaskManager {
 
         // 2. agent invoke
         log.info("sessionId: {}", ps.getSessionId());
-        List<Artifact> artifacts = this.agentInvoke(ps).block();
-        Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
+        return this.agentInvoke(ps).map(artifacts -> {
+            Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
 
-        // handle agent response
-        this.appendTaskHistory(task, 3);
+            // handle agent response
+            this.appendTaskHistory(task, 3);
 
-        return new SendTaskResponse(task);
+            return new SendTaskResponse(task);
+        });
     }
 
     @Override
-    public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
         return Mono.fromRunnable(() -> {
-            log.info("request: {}", request);
+            log.info("onSendTaskSubscribe request: {}", request);
             TaskSendParams ps = request.getParams();
             // 1. check
             JsonRpcResponse<Object> error = this.validRequest(request);
@@ -102,7 +103,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
                         }
 
                         TaskStatus taskStatus = new TaskStatus(state, message);
-                        Task latestTask = this.updateStore(task.getId(), taskStatus, Arrays.asList(artifact));
+                        Task latestTask = this.updateStore(task.getId(), taskStatus, Collections.singletonList(artifact));
                         // send notification
 
                         // artifact event
@@ -119,7 +120,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
         return Mono.empty();
     }
 
@@ -143,7 +144,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
         });
     }
 
-    private JsonRpcResponse<Object> validRequest(SendTaskRequest request) {
+    private JsonRpcResponse<Object> validRequest(JsonRpcRequest<TaskSendParams> request) {
         TaskSendParams ps = request.getParams();
         if (!Util.areModalitiesCompatible(ps.getAcceptedOutputModes(), supportModes)) {
             log.warn("Unsupported output mode. Received: {}, Support: {}",
@@ -159,20 +160,5 @@ public class EchoTaskManager extends InMemoryTaskManager {
         return null;
     }
 
-    private JsonRpcResponse<Object> validRequest(SendTaskStreamingRequest request) {
-        TaskSendParams ps = request.getParams();
-        if (!Util.areModalitiesCompatible(ps.getAcceptedOutputModes(), supportModes)) {
-            log.warn("Unsupported output mode. Received: {}, Support: {}",
-                    ps.getAcceptedOutputModes(),
-                    supportModes);
-            return Util.newIncompatibleTypesError(request.getId());
-        }
-
-        if (ps.getPushNotification() != null && Util.isEmpty(ps.getPushNotification().getUrl())) {
-            log.warn("Push notification URL is missing");
-            return new JsonRpcResponse<>(request.getId(), new InvalidParamsError("Push notification URL is missing"));
-        }
-        return null;
-    }
 }
 

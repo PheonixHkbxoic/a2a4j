@@ -1,7 +1,7 @@
-package io.github.PheonixHkbxoic.a2a4j.core.spec.message;
+package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

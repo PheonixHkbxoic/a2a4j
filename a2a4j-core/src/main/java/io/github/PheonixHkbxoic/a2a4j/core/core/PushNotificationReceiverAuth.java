@@ -1,7 +1,7 @@
-package io.github.PheonixHkbxoic.a2a4j.core.core;
+package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;

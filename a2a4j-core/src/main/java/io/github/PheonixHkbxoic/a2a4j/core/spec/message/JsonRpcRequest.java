@@ -1,6 +1,6 @@
-package io.github.PheonixHkbxoic.a2a4j.core.spec.message;
+package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.Nullable;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

@@ -1,6 +1,6 @@
-package io.github.PheonixHkbxoic.a2a4j.core.core;
+package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.PheonixHkbxoic.a2a4j.core.util.Uuid;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;

@@ -1,0 +1,229 @@
+package io.github.pheonixhkbxoic.a2a4j.webflux;
+
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.RouterFunctions;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
+import javax.validation.ValidationException;
+import javax.validation.Validator;
+import java.util.Collections;
+import java.util.Map;
+
+/**
+ * @author PheonixHkbxoic
+ */
+@Data
+@Slf4j
+public class WebfluxSseServerAdapter implements ServerAdapter {
+    private ObjectMapper om;
+    private String messageEndpoint = "/";
+    private String agentCardEndpoint = "/.well-known/agent.json";
+    private String jwksEndpoint = "/.well-known/jwks.json";
+    private final AgentCard agentCard;
+    private final RouterFunction<ServerResponse> routerFunction;
+    private TaskManager taskManager;
+    private Validator validator;
+    private PushNotificationSenderAuth auth;
+
+    private volatile boolean isClosing = false;
+
+    public WebfluxSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth auth) {
+        this(new ObjectMapper(), null, null, agentCard, taskManager, validator, null, auth);
+    }
+
+    public WebfluxSseServerAdapter(ObjectMapper objectMapper, String messageEndpoint,
+                                   String agentCardEndpoint, AgentCard agentCard, TaskManager taskManager,
+                                   Validator validator, String jwksEndpoint, PushNotificationSenderAuth auth) {
+        om = objectMapper;
+        if (messageEndpoint != null) {
+            this.messageEndpoint = messageEndpoint;
+        }
+        if (agentCardEndpoint != null) {
+            this.agentCardEndpoint = agentCardEndpoint;
+        }
+        if (jwksEndpoint != null) {
+            this.jwksEndpoint = jwksEndpoint;
+        }
+        this.agentCard = agentCard;
+        this.taskManager = taskManager;
+        this.validator = validator;
+        this.auth = auth;
+        this.routerFunction = RouterFunctions.route()
+                .GET(this.agentCardEndpoint, this::handleAgentCard)
+                .GET(this.jwksEndpoint, request ->
+                        request.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    Map<String, Object> data = Collections.singletonMap("keys", Collections.singletonList(auth.getPublicKey().toJSONObject()));
+                                    return ServerResponse.ok().bodyValue(data);
+                                })
+                )
+                .POST(this.messageEndpoint, this::handleMessage)
+                .build();
+    }
+
+
+    @Override
+    public Mono<Void> closeGracefully() {
+        this.isClosing = true;
+        return this.taskManager.closeGracefully();
+    }
+
+
+    private Mono<ServerResponse> handleAgentCard(ServerRequest request) {
+        if (this.isClosing) {
+            return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).bodyValue("Server is shutting down");
+        }
+
+        return request.bodyToMono(String.class)
+                .switchIfEmpty(Mono.just(""))
+                .flatMap(body -> {
+                    try {
+                        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(om.writeValueAsString(agentCard));
+                    } catch (Exception e) {
+                        log.error("Failed to get agent card: {}", e.getMessage());
+                        return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                    }
+                });
+    }
+
+    @SuppressWarnings("unchecked")
+    private Mono<ServerResponse> handleMessage(ServerRequest request) {
+        if (this.isClosing) {
+            return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).bodyValue("Server is shutting down");
+        }
+
+        return request.bodyToMono(String.class)
+                .switchIfEmpty(Mono.just(""))
+                .flatMap(body -> {
+                    try {
+                        if (body.isEmpty()) {
+                            throw new IllegalArgumentException("body is empty");
+                        }
+                        JsonRpcRequest<Object> req = om.readValue(body, JsonRpcRequest.class);
+                        if (validator != null) {
+                            validator.validate(req);
+                        }
+
+                        // streaming request
+                        if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(req.getMethod())
+                                || new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(req.getMethod())) {
+                            return this.handleRequestSse(req);
+                        }
+
+                        // common request
+                        return handleRequest(req);
+                    } catch (JacksonException e) {
+                        log.error("json parse error: {}", e.getMessage(), e);
+                        return ServerResponse.badRequest().bodyValue(new JSONParseError());
+                    } catch (IllegalArgumentException | IllegalStateException | ValidationException e) {
+                        log.error("invalid request error: {}", e.getMessage(), e);
+                        return ServerResponse.badRequest().bodyValue(new InvalidRequestError());
+                    } catch (Exception e) {
+                        log.error("handle request error: {}", e.getMessage(), e);
+                        return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).bodyValue(new InternalError());
+                    }
+
+                });
+    }
+
+    public <T> Mono<ServerResponse> handleRequestSse(JsonRpcRequest<T> request) {
+        Mono<? extends JsonRpcResponse<?>> monoResponse;
+        String taskId;
+        if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
+            SendTaskStreamingRequest req = om.convertValue(request, new TypeReference<SendTaskStreamingRequest>() {
+            });
+            monoResponse = taskManager.onSendTaskSubscribe(req);
+            taskId = req.getParams().getId();
+        } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
+            TaskResubscriptionRequest req = om.convertValue(request, new TypeReference<TaskResubscriptionRequest>() {
+            });
+            monoResponse = taskManager.onResubscribeTask(req);
+            taskId = req.getParams().getId();
+        } else {
+            monoResponse = Mono.just(new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
+            taskId = "";
+        }
+
+        return monoResponse.transform(rpcResponse -> {
+            // just return rpcResponse
+            if (rpcResponse != null) {
+                return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(rpcResponse);
+            }
+
+            // sse response
+            return ServerResponse.ok()
+                    .contentType(MediaType.TEXT_EVENT_STREAM)
+                    .body(Flux.<ServerSentEvent<String>>create(sink -> {
+                        sink.onDispose(() -> log.debug("SSE connection completed for request: {}", request.getId()));
+                        sink.onCancel(() -> log.debug("SSE connection timed out for request: {}", request.getId()));
+
+
+                        // sse handle
+                        taskManager.dequeueEvent(taskId)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .doOnError(sink::error)
+                                .doOnComplete(sink::complete)
+                                .subscribe(updateEvent -> {
+                                    log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
+                                    this.sendMessage(sink, taskId, new SendTaskStreamingResponse(request.getId(), updateEvent));
+                                });
+                    }), ServerSentEvent.class);
+        });
+    }
+
+    public void sendMessage(FluxSink<ServerSentEvent<String>> sink, String sessionId, JsonRpcMessage message) {
+        try {
+            String jsonText = om.writeValueAsString(message);
+            log.debug("sendMessage: {}", jsonText);
+            sink.next(ServerSentEvent.<String>builder().id(sessionId).event(EVENT_MESSAGE).data(jsonText).build());
+        } catch (Exception e) {
+            log.error("Failed to send message to session {}: {}", sessionId, e.getMessage());
+            sink.error(e);
+        }
+    }
+
+    public <T> Mono<ServerResponse> handleRequest(JsonRpcRequest<T> request) {
+        Mono<? extends JsonRpcResponse<?>> response;
+        if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
+            GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
+            });
+            response = taskManager.onGetTask(req);
+        } else if (new SendTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
+            SendTaskRequest req = om.convertValue(request, new TypeReference<SendTaskRequest>() {
+            });
+            response = taskManager.onSendTask(req);
+        } else if (new CancelTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
+            CancelTaskRequest req = om.convertValue(request, new TypeReference<CancelTaskRequest>() {
+            });
+            response = taskManager.onCancelTask(req);
+        } else {
+            response = Mono.fromSupplier(() -> new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
+        }
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response, JsonRpcResponse.class);
+    }
+
+
+}
+
+

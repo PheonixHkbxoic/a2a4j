@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.core.spec.entity;
+package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,18 +1,18 @@
-package io.github.PheonixHkbxoic.a2a4j.servlet;
+package io.github.pheonixhkbxoic.a2a4j.servlet;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.ServerAdapter;
-import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InternalError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidRequestError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.JSONParseError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import reactor.core.publisher.Mono;
@@ -111,6 +111,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     }
 
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -161,7 +162,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     }
 
     public <T> void handleRequestSse(HttpServletRequest request, HttpServletResponse response, JsonRpcRequest<T> rpcRequest) throws IOException {
-        Mono<JsonRpcResponse> monoResponse;
+        Mono<? extends JsonRpcResponse<?>> monoResponse;
         String taskId;
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(rpcRequest.getMethod())) {
             SendTaskStreamingRequest req = om.convertValue(rpcRequest, new TypeReference<SendTaskStreamingRequest>() {
@@ -179,7 +180,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         }
 
         // exception return rpcResponse
-        JsonRpcResponse rpcResponse = monoResponse.block();
+        JsonRpcResponse<?> rpcResponse = monoResponse.block();
         if (rpcResponse != null) {
             this.sendMessage(response, rpcResponse);
             return;
@@ -200,15 +201,13 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         // sse handle
         taskManager.dequeueEvent(taskId)
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnError(e -> {
-                    writer.close();
-                })
+                .doOnError(e -> writer.close())
                 .doOnComplete(writer::close)
                 .subscribe(updateEvent -> {
                     log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
                     try {
                         String message = om.writeValueAsString(new SendTaskStreamingResponse(rpcRequest.getId(), updateEvent));
-                        this.sendEvent(writer, "message", message);
+                        this.sendEvent(writer, EVENT_MESSAGE, message);
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     } catch (IOException e) {
@@ -219,7 +218,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     }
 
     public <T> void handleRequest(HttpServletResponse httpServletResponse, JsonRpcRequest<T> request) throws IOException {
-        JsonRpcResponse response;
+        Mono<? extends JsonRpcResponse<?>> response;
         if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
             });
@@ -233,13 +232,13 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
             });
             response = taskManager.onCancelTask(req);
         } else {
-            response = new JsonRpcResponse(request.getId(), new MethodNotFoundError());
+            response = Mono.just(new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
         }
 
-        this.sendMessage(httpServletResponse, response);
+        this.sendMessage(httpServletResponse, response.block());
     }
 
-    public void sendMessage(HttpServletResponse httpServletResponse, JsonRpcResponse jsonRpcResponse) throws IOException {
+    public void sendMessage(HttpServletResponse httpServletResponse, JsonRpcResponse<?> jsonRpcResponse) throws IOException {
         httpServletResponse.setContentType(APPLICATION_JSON);
         httpServletResponse.setCharacterEncoding(UTF_8);
         httpServletResponse.setStatus(HttpStatus.SC_OK);

@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.core.client.sse;
+package io.github.pheonixhkbxoic.a2a4j.core.client.sse;
 
 import java.io.BufferedReader;
 import java.io.IOException;
