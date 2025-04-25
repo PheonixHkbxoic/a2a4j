@@ -13,6 +13,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author PheonixHkbxoic
@@ -21,8 +22,10 @@ import java.util.Optional;
 @Slf4j
 public abstract class WebMvcNotificationAdapter {
     private String endpoint = "/notify";
+    protected List<String> jwksUrls;
     protected PushNotificationReceiverAuth auth;
     protected RouterFunction<ServerResponse> routerFunction;
+    protected AtomicLong verifyFailCount = new AtomicLong(0L);
 
     public WebMvcNotificationAdapter() {
     }
@@ -35,11 +38,19 @@ public abstract class WebMvcNotificationAdapter {
             String error = "a2a4j.notification.jwksUrls can not be empty";
             throw new RuntimeException(error);
         }
-        this.auth = new PushNotificationReceiverAuth().loadJwks(jwksUrls);
+        this.jwksUrls = jwksUrls;
+        this.auth = new PushNotificationReceiverAuth();
+        this.reloadJwks();
         this.routerFunction = RouterFunctions.route()
                 .GET(this.endpoint, this::handleValidationCheck)
                 .POST(this.endpoint, this::handleNotification)
                 .build();
+    }
+
+    public void reloadJwks() {
+        this.auth = new PushNotificationReceiverAuth();
+        this.auth.loadJwks(jwksUrls);
+        this.verifyFailCount.set(0L);
     }
 
     private ServerResponse handleValidationCheck(ServerRequest request) {
@@ -55,12 +66,15 @@ public abstract class WebMvcNotificationAdapter {
             Task data = request.body(Task.class);
             boolean verified = this.auth.verifyPushNotification(authorization, data);
             if (!verified) {
+                verifyFailCount.incrementAndGet();
                 log.info("push notification verification failed, authorization: {}, data: {}", authorization, Util.toJson(data));
                 return ServerResponse.badRequest().body("push notification verification failed, authorization: " + authorization);
             }
             log.info("push notification received, authorization: {}, data: {}", authorization, Util.toJson(data));
         } catch (Exception e) {
             log.error("error verifying push notification, authorization: {}, error: {}", authorization, e.getMessage(), e);
+            verifyFailCount.incrementAndGet();
+            return ServerResponse.badRequest().body(e.getMessage());
         }
         return ServerResponse.ok().build();
     }
