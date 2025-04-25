@@ -14,7 +14,7 @@ public class TestAgentCardDeserialize {
 
     @Test
     public void deserialize() throws JsonProcessingException {
-        String agentCardJson = "{\"name\":\"Currency Agent\",\"description\":\"current exchange\",\"url\":\"http://localhost:8080/\",\"provider\":null,\"version\":\"1.0.0\",\"documentationUrl\":null,\"capabilities\":{\"streaming\":false,\"pushNotifications\":false,\"stateTransitionHistory\":false},\"authentication\":null,\"defaultInputModes\":null,\"defaultOutputModes\":null,\"skills\":[{\"id\":\"convert_currency\",\"name\":\"Currency Exchange Rates Tool\",\"description\":\"Helps with exchange values between various currencies\",\"tags\":[\"currency conversion\",\"currency exchange\"],\"examples\":[\"What is exchange rate between USD and GBP?\"],\"inputModes\":[\"text\"],\"outputModes\":[\"text\"]}]}";
+        String agentCardJson = "{\"name\":\"Currency Agent\",\"description\":\"current exchange\",\"url\":\"http://localhost:8080/\",\"provider\":null,\"version\":\"1.0.1\",\"documentationUrl\":null,\"capabilities\":{\"streaming\":false,\"pushNotifications\":false,\"stateTransitionHistory\":false},\"authentication\":null,\"defaultInputModes\":null,\"defaultOutputModes\":null,\"skills\":[{\"id\":\"convert_currency\",\"name\":\"Currency Exchange Rates Tool\",\"description\":\"Helps with exchange values between various currencies\",\"tags\":[\"currency conversion\",\"currency exchange\"],\"examples\":[\"What is exchange rate between USD and GBP?\"],\"inputModes\":[\"text\"],\"outputModes\":[\"text\"]}]}";
         AgentCard agentCard = om.readValue(agentCardJson, AgentCard.class);
         Asserts.notNull(agentCard, "agent card deserialize failed");
     }
