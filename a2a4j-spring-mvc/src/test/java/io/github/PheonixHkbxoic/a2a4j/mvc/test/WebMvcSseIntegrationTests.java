@@ -1,20 +1,20 @@
 /*
  * Copyright 2024 - 2024 the original author or authors.
  */
-package io.github.PheonixHkbxoic.a2a4j.mvc.test;
+package io.github.pheonixhkbxoic.a2a4j.mvc.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.server.A2AServer;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCapabilities;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentSkill;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCapabilities;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentSkill;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;

@@ -1,9 +1,9 @@
-package io.github.PheonixHkbxoic.a2a4j.mvc;
+package io.github.pheonixhkbxoic.a2a4j.mvc;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.function.RouterFunction;

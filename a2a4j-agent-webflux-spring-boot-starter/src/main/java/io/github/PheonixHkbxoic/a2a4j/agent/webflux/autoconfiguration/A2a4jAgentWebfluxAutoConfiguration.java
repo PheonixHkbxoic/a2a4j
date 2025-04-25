@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.agent.webflux.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.agent.webflux.autoconfiguration;
 
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.webflux.WebfluxSseServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.webflux.WebfluxSseServerAdapter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
