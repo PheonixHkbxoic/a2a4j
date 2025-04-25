@@ -26,7 +26,7 @@
             <version>${springboot.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.github.PheonixHkbxoic</groupId>
+            <groupId>io.github.pheonixhkbxoic</groupId>
             <artifactId>a2a4j-core</artifactId>
             <version>1.0.0</version>
         </dependency>

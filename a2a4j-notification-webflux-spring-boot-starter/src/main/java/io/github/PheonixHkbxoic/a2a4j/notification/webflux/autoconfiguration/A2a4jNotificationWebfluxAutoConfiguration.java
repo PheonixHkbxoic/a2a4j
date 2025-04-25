@@ -1,6 +1,6 @@
-package io.github.PheonixHkbxoic.a2a4j.notification.webflux.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.notification.webflux.autoconfiguration;
 
-import io.github.PheonixHkbxoic.a2a4j.webflux.WebfluxSseServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.webflux.WebfluxSseServerAdapter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

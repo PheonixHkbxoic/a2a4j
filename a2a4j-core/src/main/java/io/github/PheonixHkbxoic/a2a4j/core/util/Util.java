@@ -1,8 +1,8 @@
-package io.github.PheonixHkbxoic.a2a4j.core.util;
+package io.github.pheonixhkbxoic.a2a4j.core.util;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.ContentTypeNotSupportedError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.JsonRpcResponse;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.ContentTypeNotSupportedError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.JsonRpcResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;

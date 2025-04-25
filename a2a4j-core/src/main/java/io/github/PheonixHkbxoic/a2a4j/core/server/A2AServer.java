@@ -1,7 +1,7 @@
-package io.github.PheonixHkbxoic.a2a4j.core.server;
+package io.github.pheonixhkbxoic.a2a4j.core.server;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.ServerAdapter;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import reactor.core.publisher.Mono;
 
 /**

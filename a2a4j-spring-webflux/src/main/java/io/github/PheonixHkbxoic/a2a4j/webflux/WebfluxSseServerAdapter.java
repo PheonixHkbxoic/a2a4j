@@ -1,16 +1,16 @@
-package io.github.PheonixHkbxoic.a2a4j.webflux;
+package io.github.pheonixhkbxoic.a2a4j.webflux;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.ServerAdapter;
-import io.github.PheonixHkbxoic.a2a4j.core.core.TaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidRequestError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.JSONParseError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

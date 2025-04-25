@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Uuid;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;

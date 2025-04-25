@@ -1,8 +1,8 @@
-package io.github.PheonixHkbxoic.a2a4j.core.client;
+package io.github.pheonixhkbxoic.a2a4j.core.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;

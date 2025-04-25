@@ -1,13 +1,16 @@
-package io.github.PheonixHkbxoic.a2a4j.servlet.test;
+package io.github.pheonixhkbxoic.a2a4j.servlet.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InternalError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InvalidParamsError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidParamsError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.JsonRpcResponse;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskRequest;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskResponse;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskStreamingRequest;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,11 +27,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class EchoTaskManager extends InMemoryTaskManager {
     // wire agent
-    private final EchoAgent agent;
+    private final io.github.pheonixhkbxoic.a2a4j.servlet.test.EchoAgent agent;
     // agent support modes
     private final List<String> supportModes = Arrays.asList("text", "file", "data");
 
-    public EchoTaskManager(EchoAgent agent, PushNotificationSenderAuth pushNotificationSenderAuth) {
+    public EchoTaskManager(io.github.pheonixhkbxoic.a2a4j.servlet.test.EchoAgent agent, PushNotificationSenderAuth pushNotificationSenderAuth) {
         super();
         this.agent = agent;
         this.pushNotificationSenderAuth = pushNotificationSenderAuth;
@@ -140,7 +143,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
 
                     // artifact event
                     if (artifact != null) {
-                        TaskArtifactUpdateEvent taskArtifactUpdateEvent = new TaskArtifactUpdateEvent(taskId, artifact);
+                        io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskArtifactUpdateEvent taskArtifactUpdateEvent = new io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskArtifactUpdateEvent(taskId, artifact);
                         this.enqueueEvent(taskId, taskArtifactUpdateEvent);
                     }
 
@@ -151,13 +154,13 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
-        TaskIdParams params = request.getParams();
+    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(io.github.pheonixhkbxoic.a2a4j.core.spec.message.TaskResubscriptionRequest request) {
+        io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskIdParams params = request.getParams();
         try {
             this.initEventQueue(params.getId(), true);
         } catch (Exception e) {
             log.error("Error while reconnecting to SSE stream: {}", e.getMessage());
-            return Mono.just(new JsonRpcResponse<Object>(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
+            return Mono.just(new JsonRpcResponse<>(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
         }
 
         return Mono.empty();
@@ -181,11 +184,10 @@ public class EchoTaskManager extends InMemoryTaskManager {
 
     private static String getUserQuery(TaskSendParams ps) {
         List<Part> parts = ps.getMessage().getParts();
-        String prompts = parts.stream()
+        return parts.stream()
                 .filter(p -> p instanceof TextPart)
                 .map(p -> ((TextPart) p).getText())
                 .collect(Collectors.joining("\n"));
-        return prompts;
     }
 
     private JsonRpcResponse<Object> validRequest(SendTaskRequest request) {

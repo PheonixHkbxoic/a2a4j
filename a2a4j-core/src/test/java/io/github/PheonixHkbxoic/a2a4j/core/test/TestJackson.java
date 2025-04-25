@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Part;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.TaskState;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.TaskStatus;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.TextPart;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Part;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskState;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskStatus;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TextPart;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import org.junit.jupiter.api.Test;
 
 /**

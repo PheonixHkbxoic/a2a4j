@@ -1,13 +1,13 @@
-package io.github.PheonixHkbxoic.a2a4j.core.core;
+package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.Nullable;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.ValueError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.*;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.InternalError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.TaskNotCancelableError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.TaskNotCancelableError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.TaskNotFoundError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -83,12 +83,8 @@ public abstract class InMemoryTaskManager implements TaskManager {
                         sink.error(e);
                     }
                 })
-                .doOnComplete(() -> {
-                    sseEventQueueMap.remove(taskId);
-                })
-                .doOnError(e -> {
-                    log.error("dequeueEvent taskId: {}, restEventSize: {}, error: {}", taskId, getRestEventSize(taskId), e.getMessage(), e);
-                });
+                .doOnComplete(() -> sseEventQueueMap.remove(taskId))
+                .doOnError(e -> log.error("dequeueEvent taskId: {}, restEventSize: {}, error: {}", taskId, getRestEventSize(taskId), e.getMessage(), e));
     }
 
     protected long getRestEventSize(String taskId) {
@@ -259,8 +255,8 @@ public abstract class InMemoryTaskManager implements TaskManager {
     /**
      * 获取task快照，并返回最多historyLength条历史消息
      *
-     * @param task
-     * @param historyLength
+     * @param task          the task to copy
+     * @param historyLength return history length
      * @return Task snapshot
      */
     protected Task appendTaskHistory(Task task, @Nullable Integer historyLength) {

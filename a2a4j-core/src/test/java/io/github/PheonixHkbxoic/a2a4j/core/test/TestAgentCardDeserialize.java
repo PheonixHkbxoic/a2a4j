@@ -1,8 +1,8 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import org.apache.http.util.Asserts;
 import org.junit.jupiter.api.Test;
 

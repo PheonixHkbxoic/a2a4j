@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.TextPart;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationReceiverAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TextPart;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.core.util;
+package io.github.pheonixhkbxoic.a2a4j.core.util;
 
 import java.util.Locale;
 import java.util.UUID;

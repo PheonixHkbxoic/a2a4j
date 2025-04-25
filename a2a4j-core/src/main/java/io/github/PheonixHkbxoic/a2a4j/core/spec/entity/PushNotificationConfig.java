@@ -1,6 +1,6 @@
-package io.github.PheonixHkbxoic.a2a4j.core.spec.entity;
+package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.Nullable;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
 import lombok.Data;
 import lombok.ToString;
 

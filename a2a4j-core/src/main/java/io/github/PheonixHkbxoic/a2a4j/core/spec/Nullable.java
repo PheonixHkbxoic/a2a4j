@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.core.spec;
+package io.github.pheonixhkbxoic.a2a4j.core.spec;
 
 /**
  * @author PheonixHkbxoic

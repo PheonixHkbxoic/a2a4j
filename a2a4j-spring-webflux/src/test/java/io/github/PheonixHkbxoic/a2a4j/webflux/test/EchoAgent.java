@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.webflux.test;
+package io.github.pheonixhkbxoic.a2a4j.webflux.test;
 
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;

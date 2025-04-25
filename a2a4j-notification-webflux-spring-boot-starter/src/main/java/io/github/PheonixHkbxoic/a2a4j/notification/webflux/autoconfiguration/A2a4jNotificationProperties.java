@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.notification.webflux.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.notification.webflux.autoconfiguration;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,7 +1,7 @@
-package io.github.PheonixHkbxoic.a2a4j.core.core;
+package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.UpdateEvent;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.UpdateEvent;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

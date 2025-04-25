@@ -1,4 +1,4 @@
-package io.github.PheonixHkbxoic.a2a4j.core.test;
+package io.github.pheonixhkbxoic.a2a4j.core.test;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;

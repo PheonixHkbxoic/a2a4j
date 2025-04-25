@@ -1,10 +1,10 @@
-package io.github.PheonixHkbxoic.a2a4j.host.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.host.autoconfiguration;
 
-import io.github.PheonixHkbxoic.a2a4j.core.client.A2AClient;
-import io.github.PheonixHkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.PushNotificationConfig;
-import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
+import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
+import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.PushNotificationConfig;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

@@ -1,6 +1,6 @@
-package io.github.PheonixHkbxoic.a2a4j.host.autoconfiguration;
+package io.github.pheonixhkbxoic.a2a4j.host.autoconfiguration;
 
-import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.PushNotificationConfig;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.PushNotificationConfig;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
