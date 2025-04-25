@@ -1,7 +1,5 @@
 package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
-import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -9,6 +7,9 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 /**
  * @author PheonixHkbxoic
  */
+@Getter
 @Slf4j
 public class PushNotificationReceiverAuth extends PushNotificationAuth {
     private JWKSet jwkSet;
