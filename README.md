@@ -84,7 +84,7 @@ A2A 协议有三个参与者：
 <dependency>
     <groupId>io.github.pheonixhkbxoic</groupId>
     <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
@@ -100,7 +100,7 @@ public AgentCard agentCard() {
     agentCard.setName("Currency Agent");
     agentCard.setDescription("current exchange");
     agentCard.setUrl("http://127.0.0.1:" + port);
-    agentCard.setVersion("1.0.0");
+    agentCard.setVersion("1.0.1");
     agentCard.setCapabilities(capabilities);
     agentCard.setSkills(Collections.singletonList(skill));
     return agentCard;
@@ -211,7 +211,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
 <dependency>
     <groupId>io.github.pheonixhkbxoic</groupId>
     <artifactId>a2a4j-host-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
@@ -286,7 +286,7 @@ public class AgentController {
 <dependency>
     <groupId>io.github.pheonixhkbxoic</groupId>
     <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 

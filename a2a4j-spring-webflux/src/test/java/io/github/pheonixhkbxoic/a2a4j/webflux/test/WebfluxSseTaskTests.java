@@ -44,7 +44,7 @@ public class WebfluxSseTaskTests {
         agentCard.setName("Currency Agent");
         agentCard.setDescription("current exchange");
         agentCard.setUrl(baseUrl);
-        agentCard.setVersion("1.0.0");
+        agentCard.setVersion("1.0.1");
         agentCard.setCapabilities(capabilities);
         agentCard.setSkills(Collections.singletonList(skill));
         return agentCard;

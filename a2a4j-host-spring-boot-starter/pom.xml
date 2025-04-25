@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
         <relativePath>../a2a4j-parent/pom.xml</relativePath>
     </parent>
 
@@ -28,7 +28,7 @@
         <dependency>
             <groupId>io.github.pheonixhkbxoic</groupId>
             <artifactId>a2a4j-core</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
 </project>

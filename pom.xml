@@ -6,7 +6,7 @@
 
     <groupId>io.github.pheonixhkbxoic</groupId>
     <artifactId>a2a4j</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
