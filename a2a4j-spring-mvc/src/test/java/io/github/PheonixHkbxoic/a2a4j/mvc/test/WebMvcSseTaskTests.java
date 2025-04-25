@@ -46,7 +46,6 @@ public class WebMvcSseTaskTests {
     private static final String baseUrl = "http://localhost:" + PORT;
 
 
-    private static AgentCard agentCard;
     private static WebMvcSseServerAdapter serverTransportProvider;
 
 
@@ -121,7 +120,7 @@ public class WebMvcSseTaskTests {
         appContext.setServletContext(context.getServletContext());
         appContext.refresh();
 
-        agentCard = appContext.getBean(AgentCard.class);
+        AgentCard agentCard = appContext.getBean(AgentCard.class);
         serverTransportProvider = appContext.getBean(WebMvcSseServerAdapter.class);
 
         // Create DispatcherServlet with our Spring context
@@ -139,7 +138,7 @@ public class WebMvcSseTaskTests {
             Connector connector = tomcat.getConnector();
             connector.setAsyncTimeout(3000); // 3 seconds timeout for async requests
             tomcat.start();
-            assertThat(tomcat.getServer().getState() == LifecycleState.STARTED);
+            assertThat(tomcat.getServer().getState() == LifecycleState.STARTED).isTrue();
         } catch (Exception e) {
             throw new RuntimeException("Failed to start Tomcat", e);
         }
@@ -229,9 +228,7 @@ public class WebMvcSseTaskTests {
                 .build();
         client.sendTaskSubscribe(params)
                 .doOnError(System.err::println)
-                .subscribe(r -> {
-                    log.info("response {}", Util.toJson(r));
-                });
+                .subscribe(r -> log.info("testSendTaskSubscribeResponse response {}", Util.toJson(r)));
         System.out.println("over " + params.getId());
     }
 
@@ -246,18 +243,14 @@ public class WebMvcSseTaskTests {
                 .build();
         client.sendTaskSubscribe(params)
                 .doOnError(System.err::println)
-                .subscribe(r -> {
-                    log.info("response1 {}", Util.toJson(r));
-                });
+                .subscribe(r -> log.info("response1 {}", Util.toJson(r)));
         System.out.println("over1 " + params.getId());
 
         TaskIdParams ps = new TaskIdParams();
         ps.setId(params.getId());
         client.sendTaskResubscribe(ps)
                 .doOnError(System.err::println)
-                .subscribe(r -> {
-                    log.info("response2 {}", Util.toJson(r));
-                });
+                .subscribe(r -> log.info("response2 {}", Util.toJson(r)));
         System.out.println("over2 " + params.getId());
     }
 
@@ -267,9 +260,7 @@ public class WebMvcSseTaskTests {
         params.setId(Uuid.uuid4hex());
         client.sendTaskResubscribe(params)
                 .doOnError(System.out::println)
-                .subscribe(r -> {
-                    log.info("response {}", Util.toJson(r));
-                });
+                .subscribe(r -> log.info("testSendTaskResubscribe response {}", Util.toJson(r)));
         System.out.println("over " + params.getId());
     }
 

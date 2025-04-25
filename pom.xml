@@ -17,10 +17,13 @@
         <module>a2a4j-core</module>
         <module>a2a4j-spring-mvc</module>
         <module>a2a4j-agent-mvc-spring-boot-starter</module>
+        <module>a2a4j-agent-webflux-spring-boot-starter</module>
         <module>a2a4j-host-spring-boot-starter</module>
         <module>a2a4j-notification-mvc-spring-boot-starter</module>
         <module>a2a4j-parent</module>
         <module>a2a4j-servlet</module>
+        <module>a2a4j-spring-webflux</module>
+        <module>a2a4j-notification-webflux-spring-boot-starter</module>
     </modules>
 
 

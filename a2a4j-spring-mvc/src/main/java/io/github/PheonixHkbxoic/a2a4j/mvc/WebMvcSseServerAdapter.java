@@ -130,7 +130,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
     }
 
     public <T> ServerResponse handleRequestSse(JsonRpcRequest<T> request) {
-        Mono<JsonRpcResponse> monoResponse;
+        Mono<? extends JsonRpcResponse<?>> monoResponse;
         String taskId;
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             SendTaskStreamingRequest req = om.convertValue(request, new TypeReference<SendTaskStreamingRequest>() {
@@ -148,25 +148,22 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
         }
 
         // exception return rpcResponse
-        JsonRpcResponse rpcResponse = monoResponse.block();
+        JsonRpcResponse<?> rpcResponse = monoResponse.block();
         if (rpcResponse != null) {
             return ServerResponse.ok().body(rpcResponse);
         }
 
         // sse response
         return ServerResponse.sse(sseBuilder -> {
-            sseBuilder.onComplete(() -> {
-                log.debug("SSE connection completed for request: {}", request.getId());
-            });
-            sseBuilder.onTimeout(() -> {
-                log.debug("SSE connection timed out for request: {}", request.getId());
-            });
+            sseBuilder.onComplete(() -> log.debug("SSE connection completed for request: {}", request.getId()));
+            sseBuilder.onTimeout(() -> log.debug("SSE connection timed out for request: {}", request.getId()));
 
 
             // sse handle
             taskManager.dequeueEvent(taskId)
                     .subscribeOn(Schedulers.boundedElastic())
                     .doOnError(sseBuilder::error)
+                    .doOnComplete(sseBuilder::complete)
                     .subscribe(updateEvent -> {
                         log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
                         this.sendMessage(sseBuilder, taskId, new SendTaskStreamingResponse(request.getId(), updateEvent));
@@ -178,7 +175,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
         try {
             String jsonText = om.writeValueAsString(message);
             log.debug("sendMessage: {}", jsonText);
-            sseBuilder.id(sessionId).event("message").data(jsonText);
+            sseBuilder.id(sessionId).event(EVENT_MESSAGE).data(jsonText);
         } catch (Exception e) {
             log.error("Failed to send message to session {}: {}", sessionId, e.getMessage());
             sseBuilder.error(e);
@@ -186,7 +183,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
     }
 
     public <T> ServerResponse handleRequest(JsonRpcRequest<T> request) {
-        JsonRpcResponse response;
+        Mono<? extends JsonRpcResponse<?>> response;
         if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
             });
@@ -200,7 +197,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
             });
             response = taskManager.onCancelTask(req);
         } else {
-            response = new JsonRpcResponse(request.getId(), new MethodNotFoundError());
+            response = Mono.fromSupplier(() -> new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
         }
         return ServerResponse.ok().body(response);
     }

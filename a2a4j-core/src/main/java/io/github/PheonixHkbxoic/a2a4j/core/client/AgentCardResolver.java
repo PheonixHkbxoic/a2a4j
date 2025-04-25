@@ -1,8 +1,8 @@
 package io.github.PheonixHkbxoic.a2a4j.core.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.PheonixHkbxoic.a2a4j.core.util.Util;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
@@ -13,6 +13,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 
@@ -44,8 +45,9 @@ public class AgentCardResolver {
         log.debug("agent card url: {}", agentCardUrl);
         try (CloseableHttpClient http = HttpClients.createDefault()) {
             HttpGet httpGet = new HttpGet(agentCardUrl);
-            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(2000).setConnectTimeout(2000).build();
+            RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(20000).setConnectTimeout(20000).build();
             httpGet.setConfig(requestConfig);
+            httpGet.addHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
             CloseableHttpResponse response = http.execute(httpGet);
 
             int statusCode = response.getStatusLine().getStatusCode();

@@ -13,8 +13,8 @@ import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.AgentSkill;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.entity.Task;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.PheonixHkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import io.github.PheonixHkbxoic.a2a4j.core.spec.message.*;
+import io.github.PheonixHkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -62,7 +62,7 @@ public class WebMvcSseIntegrationTests {
                     .description("Helps with exchange values between various currencies")
                     .tags(Arrays.asList("currency conversion", "currency exchange"))
                     .examples(Collections.singletonList("What is exchange rate between USD and GBP?"))
-                    .inputModes(Arrays.asList("text"))
+                    .inputModes(Collections.singletonList("text"))
                     .outputModes(Collections.singletonList("text"))
                     .build();
             AgentCard agentCard = new AgentCard();
@@ -79,18 +79,18 @@ public class WebMvcSseIntegrationTests {
         public TaskManager taskManager() {
             return new InMemoryTaskManager() {
                 @Override
-                public SendTaskResponse onSendTask(SendTaskRequest request) {
+                public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
                     log.info("sendTaskRequest: {}", request);
-                    return new SendTaskResponse(Task.builder().build());
+                    return Mono.just(new SendTaskResponse(Task.builder().build()));
                 }
 
                 @Override
-                public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+                public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
                     return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
                 }
 
                 @Override
-                public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+                public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
                     return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
                 }
             };
@@ -155,7 +155,7 @@ public class WebMvcSseIntegrationTests {
             Connector connector = tomcat.getConnector();
             connector.setAsyncTimeout(3000); // 3 seconds timeout for async requests
             tomcat.start();
-            assertThat(tomcat.getServer().getState() == LifecycleState.STARTED);
+            assertThat(tomcat.getServer().getState() == LifecycleState.STARTED).isTrue();
         } catch (Exception e) {
             throw new RuntimeException("Failed to start Tomcat", e);
         }

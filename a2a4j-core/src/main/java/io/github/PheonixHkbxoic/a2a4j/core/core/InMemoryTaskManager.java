@@ -100,58 +100,66 @@ public abstract class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public GetTaskResponse onGetTask(GetTaskRequest request) {
-        log.info("Getting task {}", request.getParams().getId());
+    public Mono<GetTaskResponse> onGetTask(GetTaskRequest request) {
+        return Mono.fromSupplier(() -> {
+            log.info("Getting task {}", request.getParams().getId());
 
-        Task task = this.tasks.get(request.getParams().getId());
-        if (task == null) {
-            return new GetTaskResponse(request.getId(), new TaskNotFoundError());
-        }
+            Task task = this.tasks.get(request.getParams().getId());
+            if (task == null) {
+                return new GetTaskResponse(request.getId(), new TaskNotFoundError());
+            }
 
-        Task taskSnapshot = this.appendTaskHistory(task, request.getParams().getHistoryLength());
-        return new GetTaskResponse(request.getId(), taskSnapshot);
+            Task taskSnapshot = this.appendTaskHistory(task, request.getParams().getHistoryLength());
+            return new GetTaskResponse(request.getId(), taskSnapshot);
+        });
     }
 
 
     @Override
-    public CancelTaskResponse onCancelTask(CancelTaskRequest request) {
-        log.info("Cancelling task: {}", request.getParams().getId());
-        Task task = tasks.get(request.getParams().getId());
-        if (task == null) {
-            return new CancelTaskResponse(request.getId(), new TaskNotFoundError());
-        }
-        return new CancelTaskResponse(request.getId(), new TaskNotCancelableError());
+    public Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request) {
+        return Mono.fromSupplier(() -> {
+            log.info("Cancelling task: {}", request.getParams().getId());
+            Task task = tasks.get(request.getParams().getId());
+            if (task == null) {
+                return new CancelTaskResponse(request.getId(), new TaskNotFoundError());
+            }
+            return new CancelTaskResponse(request.getId(), new TaskNotCancelableError());
+        });
     }
 
     @Override
-    public GetTaskPushNotificationResponse onGetTaskPushNotification(GetTaskPushNotificationRequest request) {
-        String taskId = request.getParams().getId();
-        log.info("Getting task push notification: {}", taskId);
-        try {
-            PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
-            TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
-                    .id(taskId)
-                    .pushNotificationConfig(pushNotificationInfo)
-                    .build();
-            return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
-        } catch (Exception e) {
-            log.error("Getting task push notification exception: {}", e.getMessage());
-            return new GetTaskPushNotificationResponse(request.getId(), new InternalError("An error occurred while getting push notification config"));
-        }
+    public Mono<GetTaskPushNotificationResponse> onGetTaskPushNotification(GetTaskPushNotificationRequest request) {
+        return Mono.fromSupplier(() -> {
+            String taskId = request.getParams().getId();
+            log.info("Getting task push notification: {}", taskId);
+            try {
+                PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
+                TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
+                        .id(taskId)
+                        .pushNotificationConfig(pushNotificationInfo)
+                        .build();
+                return new GetTaskPushNotificationResponse(request.getId(), taskPushNotificationConfig);
+            } catch (Exception e) {
+                log.error("Getting task push notification exception: {}", e.getMessage());
+                return new GetTaskPushNotificationResponse(request.getId(), new InternalError("An error occurred while getting push notification config"));
+            }
+        });
     }
 
     @Override
-    public SetTaskPushNotificationResponse onSetTaskPushNotification(SetTaskPushNotificationRequest request) {
-        String taskId = request.getParams().getId();
-        log.info("Setting task push notification: {}", taskId);
-        try {
-            this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
-        } catch (Exception e) {
-            log.error("Setting task push notification exception: {}", e.getMessage());
-            return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
-        }
+    public Mono<SetTaskPushNotificationResponse> onSetTaskPushNotification(SetTaskPushNotificationRequest request) {
+        return Mono.fromSupplier(() -> {
+            String taskId = request.getParams().getId();
+            log.info("Setting task push notification: {}", taskId);
+            try {
+                this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
+            } catch (Exception e) {
+                log.error("Setting task push notification exception: {}", e.getMessage());
+                return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
+            }
 
-        return new SetTaskPushNotificationResponse(taskId, request.getParams());
+            return new SetTaskPushNotificationResponse(taskId, request.getParams());
+        });
     }
 
     protected boolean hasPushNotificationInfo(String taskId) {

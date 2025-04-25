@@ -10,19 +10,19 @@ import reactor.core.publisher.Mono;
  */
 public interface TaskManager {
 
-    GetTaskResponse onGetTask(GetTaskRequest request);
+    Mono<GetTaskResponse> onGetTask(GetTaskRequest request);
 
-    SendTaskResponse onSendTask(SendTaskRequest request);
+    Mono<SendTaskResponse> onSendTask(SendTaskRequest request);
 
-    Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request);
+    Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request);
 
-    CancelTaskResponse onCancelTask(CancelTaskRequest request);
+    Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request);
 
-    GetTaskPushNotificationResponse onGetTaskPushNotification(GetTaskPushNotificationRequest request);
+    Mono<GetTaskPushNotificationResponse> onGetTaskPushNotification(GetTaskPushNotificationRequest request);
 
-    SetTaskPushNotificationResponse onSetTaskPushNotification(SetTaskPushNotificationRequest request);
+    Mono<SetTaskPushNotificationResponse> onSetTaskPushNotification(SetTaskPushNotificationRequest request);
 
-    Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request);
+    Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request);
 
     Flux<UpdateEvent> dequeueEvent(String taskId);
 

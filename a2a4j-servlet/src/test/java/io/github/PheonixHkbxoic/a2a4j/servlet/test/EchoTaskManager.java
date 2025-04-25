@@ -35,19 +35,19 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public SendTaskResponse onSendTask(SendTaskRequest request) {
+    public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
         log.info("onSendTask request: {}", request);
         TaskSendParams ps = request.getParams();
         // 1. check
         JsonRpcResponse<Object> error = this.validRequest(request);
         if (error != null) {
-            return new SendTaskResponse(request.getId(), error.getError());
+            return Mono.just(new SendTaskResponse(request.getId(), error.getError()));
         }
         // check and set pushNotification
         if (ps.getPushNotification() != null) {
             boolean verified = this.verifyPushNotificationInfo(ps.getId(), ps.getPushNotification());
             if (!verified) {
-                return new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid"));
+                return Mono.just(new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid")));
             }
         }
 
@@ -57,18 +57,18 @@ public class EchoTaskManager extends InMemoryTaskManager {
         this.sendTaskNotification(taskWorking);
 
         // 3. agent invoke
-        List<Artifact> artifacts = this.agentInvoke(ps).block();
+        return this.agentInvoke(ps).map(artifacts -> {
+            // 4. save and notification
+            Task taskCompleted = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
+            this.sendTaskNotification(taskCompleted);
 
-        // 4. save and notification
-        Task taskCompleted = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
-        this.sendTaskNotification(taskCompleted);
-
-        Task taskSnapshot = this.appendTaskHistory(taskCompleted, 3);
-        return new SendTaskResponse(taskSnapshot);
+            Task taskSnapshot = this.appendTaskHistory(taskCompleted, 3);
+            return new SendTaskResponse(taskSnapshot);
+        });
     }
 
     @Override
-    public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
         log.info("onSendTaskSubscribe request: {}", request);
         TaskSendParams ps = request.getParams();
         String taskId = ps.getId();
@@ -151,13 +151,13 @@ public class EchoTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
         TaskIdParams params = request.getParams();
         try {
             this.initEventQueue(params.getId(), true);
         } catch (Exception e) {
             log.error("Error while reconnecting to SSE stream: {}", e.getMessage());
-            return Mono.just(new JsonRpcResponse(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
+            return Mono.just(new JsonRpcResponse<Object>(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
         }
 
         return Mono.empty();

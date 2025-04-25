@@ -43,7 +43,8 @@ public class TestTaskManager {
                 .message(message)
                 .build();
         request.setParams(params);
-        SendTaskResponse response = echo.onSendTask(request);
+        SendTaskResponse response = echo.onSendTask(request).block();
+        assert response != null;
         log.info("response: {}", response.getResult().getArtifacts().stream()
                 .flatMap(a -> a.getParts().stream())
                 .filter(p -> p instanceof TextPart)
@@ -55,12 +56,12 @@ public class TestTaskManager {
     public void testQueue() {
         InMemoryTaskManager manager = new InMemoryTaskManager() {
             @Override
-            public SendTaskResponse onSendTask(SendTaskRequest request) {
-                return null;
+            public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
+                return Mono.empty();
             }
 
             @Override
-            public Mono<JsonRpcResponse> onSendTaskSubscribe(SendTaskStreamingRequest request) {
+            public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
                 final String taskId = Uuid.uuid4hex();
                 this.initEventQueue(taskId, false);
 
@@ -68,11 +69,6 @@ public class TestTaskManager {
                 Flux.<Integer>push(sink -> {
                             for (int i = 0; i < 10; i++) {
                                 sink.next(i + 1);
-//                                try {
-//                                    TimeUnit.MILLISECONDS.sleep(500);
-//                                } catch (InterruptedException e) {
-//                                    throw new RuntimeException(e);
-//                                }
                             }
                             sink.complete();
                         })
@@ -86,9 +82,7 @@ public class TestTaskManager {
                 log.info("enqueue flux subscribe after: {}", taskId);
 
                 this.dequeueEvent(taskId)
-                        .subscribe(e -> {
-                            log.info("dequeue subscribe, n: {}", e.getMetadata().get("n"));
-                        });
+                        .subscribe(e -> log.info("dequeue subscribe, n: {}", e.getMetadata().get("n")));
                 log.info("dequeue flux subscribe after: {}", taskId);
 
                 try {
@@ -100,7 +94,7 @@ public class TestTaskManager {
             }
 
             @Override
-            public Mono<JsonRpcResponse> onResubscribeTask(TaskResubscriptionRequest request) {
+            public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
                 return null;
             }
         };

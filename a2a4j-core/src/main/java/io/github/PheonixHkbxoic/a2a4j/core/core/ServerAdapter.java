@@ -12,4 +12,5 @@ public interface ServerAdapter {
 
     Mono<Void> closeGracefully();
 
+    String EVENT_MESSAGE = "message";
 }
