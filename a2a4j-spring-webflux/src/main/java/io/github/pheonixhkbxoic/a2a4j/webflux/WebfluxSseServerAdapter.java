@@ -165,31 +165,31 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
             taskId = "";
         }
 
-        return monoResponse.transform(rpcResponse -> {
-            // just return rpcResponse
-            if (rpcResponse != null) {
-                return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(rpcResponse);
-            }
+        return monoResponse
+                // when monoResponse is not empty
+                .flatMap(rpcResponse -> {
+                    // just return rpcResponse
+                    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(rpcResponse);
+                })
+                // when monoResponse is empty
+                // return sse response
+                .switchIfEmpty(ServerResponse.ok()
+                        .contentType(MediaType.TEXT_EVENT_STREAM)
+                        .body(Flux.<ServerSentEvent<String>>create(sink -> {
+                            sink.onDispose(() -> log.debug("SSE connection completed for request: {}", request.getId()));
+                            sink.onCancel(() -> log.debug("SSE connection timed out for request: {}", request.getId()));
 
-            // sse response
-            return ServerResponse.ok()
-                    .contentType(MediaType.TEXT_EVENT_STREAM)
-                    .body(Flux.<ServerSentEvent<String>>create(sink -> {
-                        sink.onDispose(() -> log.debug("SSE connection completed for request: {}", request.getId()));
-                        sink.onCancel(() -> log.debug("SSE connection timed out for request: {}", request.getId()));
 
-
-                        // sse handle
-                        taskManager.dequeueEvent(taskId)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .doOnError(sink::error)
-                                .doOnComplete(sink::complete)
-                                .subscribe(updateEvent -> {
-                                    log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
-                                    this.sendMessage(sink, taskId, new SendTaskStreamingResponse(request.getId(), updateEvent));
-                                });
-                    }), ServerSentEvent.class);
-        });
+                            // sse handle
+                            taskManager.dequeueEvent(taskId)
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .doOnError(sink::error)
+                                    .doOnComplete(sink::complete)
+                                    .subscribe(updateEvent -> {
+                                        log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
+                                        this.sendMessage(sink, taskId, new SendTaskStreamingResponse(request.getId(), updateEvent));
+                                    });
+                        }), ServerSentEvent.class));
     }
 
     public void sendMessage(FluxSink<ServerSentEvent<String>> sink, String sessionId, JsonRpcMessage message) {
