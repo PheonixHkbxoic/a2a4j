@@ -148,7 +148,7 @@ public class WebMvcSseIntegrationTests {
         Wrapper wrapper = Tomcat.addServlet(context, "dispatcherServlet", dispatcherServlet);
         wrapper.setLoadOnStartup(1);
         wrapper.setAsyncSupported(true);
-        context.addServletMapping("/*", "dispatcherServlet");
+        context.addServletMappingDecoded("/*", "dispatcherServlet");
 
         try {
             // Configure and start the connector with async support

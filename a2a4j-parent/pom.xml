@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j</artifactId>
-        <version>1.0.1</version>
+        <version>2.0.0</version>
     </parent>
 
     <artifactId>a2a4j-parent</artifactId>
@@ -16,26 +16,25 @@
 
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.36</lombok.version>
         <jackson.version>2.18.3</jackson.version>
         <logback.version>1.2.11</logback.version>
         <jupiter.version>5.13.0-M2</jupiter.version>
-        <mockito.version>5.14.2</mockito.version>
+        <mockito.version>5.17.0</mockito.version>
 
-        <!-- springboot 2.7.18 -->
-        <springboot.version>2.7.18</springboot.version>
-        <springframework.version>5.3.31</springframework.version>
+        <!-- springboot 3.X.X -->
+        <springboot.version>3.4.5</springboot.version>
+        <springframework.version>6.2.6</springframework.version>
 
-        <tomcat.version>8.0.30</tomcat.version>
-        <!--        <jakarta.servlet.version>5.0.0</jakarta.servlet.version>-->
-        <servlet.version>3.1.0</servlet.version>
-        <validation.version>1.1.0.Final</validation.version>
+        <tomcat.version>10.1.40</tomcat.version>
+        <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
+        <jarkarta.validation.version>3.1.1</jarkarta.validation.version>
         <validator.version>6.2.5.Final</validator.version>
-        <reactor.version>3.4.34</reactor.version>
-        <reactor.http.version>1.0.39</reactor.http.version>
+        <reactor.version>3.7.4</reactor.version>
+        <reactor.http.version>1.2.4</reactor.http.version>
         <assertj.version>3.26.3</assertj.version>
 
         <httpclient.version>4.5.13</httpclient.version>
@@ -87,18 +86,18 @@
                 <version>${tomcat.version}</version>
                 <scope>provided</scope>
             </dependency>
-            <dependency>
-                <groupId>org.apache.tomcat.embed</groupId>
-                <artifactId>tomcat-embed-logging-juli</artifactId>
-                <version>${tomcat.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.tomcat.embed</groupId>
-                <artifactId>tomcat-embed-logging-log4j</artifactId>
-                <version>${tomcat.version}</version>
-                <scope>provided</scope>
-            </dependency>
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.tomcat.embed</groupId>-->
+            <!--                <artifactId>tomcat-embed-logging-juli</artifactId>-->
+            <!--                <version>${tomcat.version}</version>-->
+            <!--                <scope>provided</scope>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.tomcat.embed</groupId>-->
+            <!--                <artifactId>tomcat-embed-logging-log4j</artifactId>-->
+            <!--                <version>${tomcat.version}</version>-->
+            <!--                <scope>provided</scope>-->
+            <!--            </dependency>-->
 
             <!-- test -->
             <dependency>
@@ -118,15 +117,25 @@
                 <scope>test</scope>
             </dependency>
 
+            <!--            <dependency>-->
+            <!--                <groupId>javax.servlet</groupId>-->
+            <!--                <artifactId>javax.servlet-api</artifactId>-->
+            <!--                <version>${servlet.version}</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>javax.validation</groupId>-->
+            <!--                <artifactId>validation-api</artifactId>-->
+            <!--                <version>${validation.version}</version>-->
+            <!--            </dependency>-->
             <dependency>
-                <groupId>javax.servlet</groupId>
-                <artifactId>javax.servlet-api</artifactId>
-                <version>${servlet.version}</version>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>${jakarta.servlet.version}</version>
             </dependency>
             <dependency>
-                <groupId>javax.validation</groupId>
-                <artifactId>validation-api</artifactId>
-                <version>${validation.version}</version>
+                <groupId>jakarta.validation</groupId>
+                <artifactId>jakarta.validation-api</artifactId>
+                <version>${jarkarta.validation.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate.validator</groupId>

@@ -11,6 +11,8 @@ import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import jakarta.validation.ValidationException;
+import jakarta.validation.Validator;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,8 +23,6 @@ import org.springframework.web.servlet.function.ServerResponse;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import javax.validation.ValidationException;
-import javax.validation.Validator;
 import java.util.Collections;
 import java.util.Map;
 

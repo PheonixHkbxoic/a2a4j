@@ -123,7 +123,7 @@ public class A2AClient {
             BufferedReader buf = new BufferedReader(new InputStreamReader(entity.getContent()));
             SseEventReader reader = new SseEventReader(buf);
             boolean isSse = entity.getContentType().getValue().contains("text/event-stream");
-            log.debug("isSse: {}, contentType: {}", isSse, entity.getContentType().toString());
+            log.debug("isSse: {}, contentType: {}", isSse, entity.getContentType());
             if (isSse) {
                 return Flux.<SendTaskStreamingResponse>create(sink -> {
                             reader.onEvent(sseEvent -> {
@@ -149,6 +149,7 @@ public class A2AClient {
                             try {
                                 buf.close();
                                 response.close();
+                                EntityUtils.consume(entity);
                             } catch (IOException ignored) {
 
                             }
@@ -157,6 +158,7 @@ public class A2AClient {
                             try {
                                 buf.close();
                                 response.close();
+                                EntityUtils.consume(entity);
                             } catch (IOException ignored) {
 
                             }
