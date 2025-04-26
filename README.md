@@ -70,7 +70,7 @@ Features:
 - [x] more a2a4j example project, please refer
   to [a2a4j-examples jdk8](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/jdk8)
   and [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main)
-- [ ] support more LLM, eg.LangChain
+- [x] support more LLM, eg.LangChain
 
 ## a2a4j-examples
 
