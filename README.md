@@ -56,13 +56,21 @@ A2A 协议有三个参与者：
 
 ## 开发计划 PLAN
 
-- [x] support jdk8, SpringBoot 2.7.18
+Branches:
+
+* jdk8 support jdk8, SpringBoot 2.7.18
+* jdk17 support jdk17, SpringBoot 3.4.5
+* main release version of jdk17
+
+Features:
+
 - [x] support spring mvc, reactor, sse
 - [x] support servlet and sse
 - [x] support webflux and sse
+- [x] more a2a4j example project, please refer
+  to [a2a4j-examples jdk8](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/jdk8)
+  and [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main)
 - [ ] support more LLM, eg.LangChain
-- [ ] support jdk17, SpringBoot 3.X
-- [ ] more a2a4j example project
 
 ## a2a4j-examples
 
@@ -70,10 +78,12 @@ A2A 协议有三个参与者：
 
 ### 前置条件
 
-* a2a4j目录使用JDK8、SpringBoot 2.7.18进行开发
-* 目前支持SpringMvc+Reactor+SSE
-* 后续会支持servlet,webflux
-* 后续会支持JDK17+, SpringBoot 3.X
+开发环境：JDK8, SpringBoot 2.7.18 please refer
+to [a2a4j-examples jdk8](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/jdk8)  
+开发环境：JDK17+, SpringBoot 3.4.5 please refer
+to [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main)
+
+下面的示例开发环境：JDK17+, SpringBoot 3.4.5
 
 ### server配置
 
@@ -81,11 +91,20 @@ A2A 协议有三个参与者：
 
 ```xml
 
-<dependency>
-    <groupId>io.github.pheonixhkbxoic</groupId>
-    <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
-    <version>2.0.0</version>
-</dependency>
+<dependencies>
+
+    <dependency>
+        <groupId>io.github.pheonixhkbxoic</groupId>
+        <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
+        <version>2.0.0</version>
+    </dependency>
+    <!-- 或 use webflux -->
+    <!--    <dependency>-->
+    <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
+    <!--        <artifactId>a2a4j-agent-webflux-spring-boot-starter</artifactId>-->
+    <!--        <version>2.0.0</version>-->
+    <!--    </dependency>-->
+</dependencies>
 ```
 
 2. 配置AgentCard实例
@@ -283,11 +302,20 @@ public class AgentController {
 
 ```xml
 
-<dependency>
-    <groupId>io.github.pheonixhkbxoic</groupId>
-    <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
-    <version>2.0.0</version>
-</dependency>
+<dependencies>
+
+    <dependency>
+        <groupId>io.github.pheonixhkbxoic</groupId>
+        <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
+        <version>2.0.0</version>
+    </dependency>
+    <!-- 或 use webflux -->
+    <!--    <dependency>-->
+    <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
+    <!--        <artifactId>a2a4j-notification-webflux-spring-boot-starter</artifactId>-->
+    <!--        <version>2.0.0</version>-->
+    <!--    </dependency>-->
+</dependencies>
 ```
 
 2. 在配置文件(如application.xml)中配置相关属性
@@ -311,11 +339,19 @@ a2a4j:
 
 @Component
 public class NotificationListener extends WebMvcNotificationAdapter {
+    protected final ScheduledThreadPoolExecutor scheduler;
 
     public NotificationListener(@Autowired A2a4jNotificationProperties a2a4jNotificationProperties) {
         super(a2a4jNotificationProperties.getEndpoint(), a2a4jNotificationProperties.getJwksUrls());
-    }
 
+        // auto reloadJwks when Agent restart
+        scheduler = new ScheduledThreadPoolExecutor(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            if (verifyFailCount.get() != 0) {
+                this.reloadJwks();
+            }
+        }, 1, 1, TimeUnit.MINUTES);
+    }
     // TODO 实现方法来处理通知，可以使用默认实现
 }
 
