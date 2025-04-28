@@ -5,6 +5,7 @@ package io.github.pheonixhkbxoic.a2a4j.mvc.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
@@ -68,13 +69,18 @@ public class WebMvcSseTaskTests {
         }
 
         @Bean
+        public InMemoryTaskStore inMemoryTaskStore() {
+            return new InMemoryTaskStore();
+        }
+
+        @Bean
         public EchoAgent echoAgent() {
             return new EchoAgent();
         }
 
         @Bean
         public TaskManager taskManager() {
-            return new EchoTaskManager(echoAgent(), pushNotificationSenderAuth());
+            return new EchoTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), echoAgent());
         }
 
         @Bean

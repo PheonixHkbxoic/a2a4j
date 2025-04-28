@@ -2,6 +2,7 @@ package io.github.pheonixhkbxoic.a2a4j.webflux.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.TaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.ValueError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
@@ -29,10 +30,9 @@ public class EchoTaskManager extends InMemoryTaskManager {
     // agent support modes
     private final List<String> supportModes = Arrays.asList("text", "file", "data");
 
-    public EchoTaskManager(EchoAgent agent, PushNotificationSenderAuth pushNotificationSenderAuth) {
-        super();
+    public EchoTaskManager(TaskStore taskStore, PushNotificationSenderAuth pushNotificationSenderAuth, EchoAgent agent) {
+        super(taskStore, pushNotificationSenderAuth);
         this.agent = agent;
-        this.pushNotificationSenderAuth = pushNotificationSenderAuth;
     }
 
     @Override
@@ -46,7 +46,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
         }
         // check and set pushNotification
         if (ps.getPushNotification() != null) {
-            boolean verified = this.verifyPushNotificationInfo(ps.getId(), ps.getPushNotification());
+            boolean verified = this.verifyPushNotificationInfo(ps.getPushNotification());
             if (!verified) {
                 return Mono.just(new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid")));
             }
@@ -82,7 +82,7 @@ public class EchoTaskManager extends InMemoryTaskManager {
             }
             // check and set pushNotification
             if (ps.getPushNotification() != null) {
-                boolean verified = this.verifyPushNotificationInfo(ps.getId(), ps.getPushNotification());
+                boolean verified = this.verifyPushNotificationInfo(ps.getPushNotification());
                 if (!verified) {
                     return Mono.just(new SendTaskResponse(request.getId(), new InvalidParamsError("Push notification URL is invalid")));
                 }

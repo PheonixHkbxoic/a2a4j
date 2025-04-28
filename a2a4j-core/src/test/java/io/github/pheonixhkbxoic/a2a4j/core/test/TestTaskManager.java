@@ -1,6 +1,7 @@
 package io.github.pheonixhkbxoic.a2a4j.core.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
@@ -24,8 +25,10 @@ public class TestTaskManager {
 
     @Test
     public void testEchoTaskManager() {
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
         EchoAgent agent = new EchoAgent();
-        EchoTaskManager echo = new EchoTaskManager(agent, new PushNotificationSenderAuth());
+        EchoTaskManager echo = new EchoTaskManager(taskStore, pushNotificationSenderAuth, agent);
 
         SendTaskRequest request = new SendTaskRequest();
         Map<String, Object> metadata = new HashMap<String, Object>() {{
@@ -54,7 +57,7 @@ public class TestTaskManager {
 
     @Test
     public void testQueue() {
-        InMemoryTaskManager manager = new InMemoryTaskManager() {
+        InMemoryTaskManager manager = new InMemoryTaskManager(new InMemoryTaskStore(), new PushNotificationSenderAuth()) {
             @Override
             public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
                 return Mono.empty();

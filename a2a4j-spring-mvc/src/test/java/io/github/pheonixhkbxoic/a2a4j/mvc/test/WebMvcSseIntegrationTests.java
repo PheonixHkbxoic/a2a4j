@@ -5,6 +5,7 @@ package io.github.pheonixhkbxoic.a2a4j.mvc.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
 import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
@@ -76,8 +77,13 @@ public class WebMvcSseIntegrationTests {
         }
 
         @Bean
+        public InMemoryTaskStore inMemoryTaskStore() {
+            return new InMemoryTaskStore();
+        }
+
+        @Bean
         public TaskManager taskManager() {
-            return new InMemoryTaskManager() {
+            return new InMemoryTaskManager(inMemoryTaskStore(), new PushNotificationSenderAuth()) {
                 @Override
                 public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
                     log.info("sendTaskRequest: {}", request);

@@ -26,15 +26,17 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Slf4j
 public abstract class InMemoryTaskManager implements TaskManager {
+    protected TaskStore taskStore;
     protected final ReentrantLock lock = new ReentrantLock();
-    protected final Map<String, Task> tasks = new HashMap<>();
     protected final Map<String, PushNotificationConfig> pushNotificationInfos = new HashMap<>();
     protected final ConcurrentMap<String, LinkedBlockingQueue<UpdateEvent>> sseEventQueueMap = new ConcurrentHashMap<>();
     protected boolean isClosing;
     protected PushNotificationSenderAuth pushNotificationSenderAuth;
 
 
-    public InMemoryTaskManager() {
+    public InMemoryTaskManager(TaskStore taskStore, PushNotificationSenderAuth pushNotificationSenderAuth) {
+        this.taskStore = taskStore;
+        this.pushNotificationSenderAuth = pushNotificationSenderAuth;
     }
 
     protected LinkedBlockingQueue<UpdateEvent> initEventQueue(String taskId, boolean resubscribe) {
@@ -100,7 +102,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
         return Mono.fromSupplier(() -> {
             log.info("Getting task {}", request.getParams().getId());
 
-            Task task = this.tasks.get(request.getParams().getId());
+            Task task = this.taskStore.query(request.getParams().getId());
             if (task == null) {
                 return new GetTaskResponse(request.getId(), new TaskNotFoundError());
             }
@@ -115,7 +117,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
     public Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request) {
         return Mono.fromSupplier(() -> {
             log.info("Cancelling task: {}", request.getParams().getId());
-            Task task = tasks.get(request.getParams().getId());
+            Task task = this.taskStore.query(request.getParams().getId());
             if (task == null) {
                 return new CancelTaskResponse(request.getId(), new TaskNotFoundError());
             }
@@ -165,7 +167,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
     protected PushNotificationConfig getPushNotificationInfo(String taskId) {
         lock.lock();
         try {
-            Task task = this.tasks.get(taskId);
+            Task task = this.taskStore.query(taskId);
             if (task == null) {
                 throw new ValueError("Task not found for " + taskId);
             }
@@ -178,7 +180,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
     protected void setPushNotificationInfo(String taskId, PushNotificationConfig info) {
         lock.lock();
         try {
-            Task task = this.tasks.get(taskId);
+            Task task = this.taskStore.query(taskId);
             if (task == null) {
                 throw new ValueError("Task not found for " + taskId);
             }
@@ -188,7 +190,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
         }
     }
 
-    protected boolean verifyPushNotificationInfo(String taskId, PushNotificationConfig info) {
+    protected boolean verifyPushNotificationInfo(PushNotificationConfig info) {
         return PushNotificationSenderAuth.verifyPushNotificationUrl(info.getUrl());
     }
 
@@ -211,15 +213,15 @@ public abstract class InMemoryTaskManager implements TaskManager {
 
         lock.lock();
         try {
-            Task task = this.tasks.get(taskSendParams.getId());
+            Task task = this.taskStore.query(taskSendParams.getId());
             if (task == null) {
                 task = Task.builder().id(taskSendParams.getId()).sessionId(taskSendParams.getSessionId()).status(new TaskStatus(TaskState.SUBMITTED)).history(new ArrayList<>()).build();
-                this.tasks.put(taskSendParams.getId(), task);
             }
 
             if (taskSendParams.getMessage() != null) {
                 task.getHistory().add(taskSendParams.getMessage());
             }
+            this.taskStore.update(task);
             this.setPushNotificationInfo(task.getId(), taskSendParams.getPushNotification());
             return task;
         } finally {
@@ -231,7 +233,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
 //        log.info("update Store: {}", taskId);
         lock.lock();
         try {
-            Task task = tasks.get(taskId);
+            Task task = this.taskStore.query(taskId);
             if (task == null) {
                 log.error("Task not found for updating the task: {}", taskId);
                 throw new ValueError("Task not found: " + taskId);
@@ -246,6 +248,7 @@ public abstract class InMemoryTaskManager implements TaskManager {
                 }
                 task.getArtifacts().addAll(artifacts);
             }
+            this.taskStore.update(task);
             return task;
         } finally {
             lock.unlock();

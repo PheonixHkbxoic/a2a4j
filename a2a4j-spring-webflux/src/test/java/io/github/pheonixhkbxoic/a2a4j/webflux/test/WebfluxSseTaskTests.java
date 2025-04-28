@@ -5,6 +5,7 @@ package io.github.pheonixhkbxoic.a2a4j.webflux.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
@@ -57,10 +58,11 @@ public class WebfluxSseTaskTests {
 
     @BeforeEach
     public void before() {
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
         EchoAgent echoAgent = new EchoAgent();
         AgentCard agentCard = agentCard();
-        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
-        EchoTaskManager taskManager = new EchoTaskManager(echoAgent, pushNotificationSenderAuth);
+        EchoTaskManager taskManager = new EchoTaskManager(taskStore, pushNotificationSenderAuth, echoAgent);
         WebfluxSseServerAdapter webFluxSseServerAdapter = new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
         HttpHandler httpHandler = RouterFunctions.toHttpHandler(webFluxSseServerAdapter.getRouterFunction());
         ReactorHttpHandlerAdapter adapter = new ReactorHttpHandlerAdapter(httpHandler);
@@ -71,7 +73,7 @@ public class WebfluxSseTaskTests {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, webFluxSseServerAdapter);
             server.start();
-            
+
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
             assertThat(serverAgentCard).isNotNull();

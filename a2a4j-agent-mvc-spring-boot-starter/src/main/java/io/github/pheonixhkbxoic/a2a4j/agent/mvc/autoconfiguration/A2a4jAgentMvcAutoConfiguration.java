@@ -1,9 +1,7 @@
 package io.github.pheonixhkbxoic.a2a4j.agent.mvc.autoconfiguration;
 
 
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
-import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
@@ -26,6 +24,13 @@ public class A2a4jAgentMvcAutoConfiguration {
     @Bean
     public PushNotificationSenderAuth pushNotificationSenderAuth() {
         return new PushNotificationSenderAuth();
+    }
+
+    @ConditionalOnMissingBean(TaskStore.class)
+    @ConditionalOnClass(InMemoryTaskStore.class)
+    @Bean
+    public InMemoryTaskStore inMemoryTaskStore() {
+        return new InMemoryTaskStore();
     }
 
     @ConditionalOnMissingBean(ServerAdapter.class)

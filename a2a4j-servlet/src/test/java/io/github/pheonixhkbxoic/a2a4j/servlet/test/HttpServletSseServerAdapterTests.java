@@ -2,6 +2,7 @@ package io.github.pheonixhkbxoic.a2a4j.servlet.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
+import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
@@ -61,13 +62,18 @@ public class HttpServletSseServerAdapterTests {
         }
 
         @Bean
+        public InMemoryTaskStore inMemoryTaskStore() {
+            return new InMemoryTaskStore();
+        }
+
+        @Bean
         public EchoAgent echoAgent() {
             return new EchoAgent();
         }
 
         @Bean
         public TaskManager taskManager() {
-            return new EchoTaskManager(echoAgent(), pushNotificationSenderAuth());
+            return new EchoTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), echoAgent());
         }
 
         @Bean
@@ -137,7 +143,7 @@ public class HttpServletSseServerAdapterTests {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, httpServletSseServerAdapter);
             server.start();
-            
+
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
             assertThat(serverAgentCard).isNotNull();
