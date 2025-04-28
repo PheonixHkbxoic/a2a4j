@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
@@ -49,7 +50,8 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     private final Validator validator;
     private final PushNotificationSenderAuth auth;
 
-    private volatile boolean isClosing = false;
+    private volatile boolean isClosing = true;
+    private final A2AServer server;
 
     public HttpServletSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth auth) {
         this(new ObjectMapper(), null, null, agentCard, taskManager, validator, null, auth);
@@ -72,6 +74,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         this.taskManager = taskManager;
         this.validator = validator;
         this.auth = auth;
+        this.server = new A2AServer(this.agentCard, this);
     }
 
     public static final String UTF_8 = "UTF-8";
@@ -252,6 +255,16 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     public Mono<Void> closeGracefully() {
         isClosing = true;
         return this.taskManager.closeGracefully();
+    }
+
+    @Override
+    public void start() {
+        this.isClosing = false;
+    }
+
+    @Override
+    public A2AServer getServer() {
+        return this.server;
     }
 
     /**

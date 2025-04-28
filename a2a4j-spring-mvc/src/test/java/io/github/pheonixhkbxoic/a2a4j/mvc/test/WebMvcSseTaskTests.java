@@ -192,7 +192,7 @@ public class WebMvcSseTaskTests {
         TaskQueryParams params = new TaskQueryParams();
         params.setId("1");
         params.setHistoryLength(3);
-        GetTaskResponse taskResponse = client.getTask(params);
+        GetTaskResponse taskResponse = client.getTask(params).block();
         JsonRpcError error = taskResponse.getError();
         assertThat(error).isNotNull().extracting("code").isEqualTo(new TaskNotFoundError().getCode());
     }
@@ -205,7 +205,7 @@ public class WebMvcSseTaskTests {
                 .historyLength(3)
                 .message((Message.builder().role(Role.USER)).parts(Collections.singletonList(new TextPart("100块人民币能总汇多少美元"))).build())
                 .build();
-        SendTaskResponse taskResponse = client.sendTask(params);
+        SendTaskResponse taskResponse = client.sendTask(params).block();
         assertThat(taskResponse).isNotNull();
         assertThat(taskResponse.getError()).isNull();
         log.info("taskResponse: {}", Util.toJson(taskResponse));
@@ -213,7 +213,7 @@ public class WebMvcSseTaskTests {
         TaskQueryParams q = new TaskQueryParams();
         q.setId(params.getId());
         q.setHistoryLength(3);
-        GetTaskResponse getTaskResponse = client.getTask(q);
+        GetTaskResponse getTaskResponse = client.getTask(q).block();
         assertThat(getTaskResponse).isNotNull();
         log.info("getTaskResponse: {}", Util.toJson(getTaskResponse));
     }

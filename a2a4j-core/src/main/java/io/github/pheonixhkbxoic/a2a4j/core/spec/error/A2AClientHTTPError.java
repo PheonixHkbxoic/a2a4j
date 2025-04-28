@@ -17,7 +17,7 @@ public class A2AClientHTTPError extends A2AClientError {
     public A2AClientHTTPError(int statusCode, String message) {
         super(String.format("HTTP Error %d: %s", statusCode, message));
         this.statusCode = statusCode;
-        this.message = message;
+        this.message = super.getMessage();
     }
 
     @Override

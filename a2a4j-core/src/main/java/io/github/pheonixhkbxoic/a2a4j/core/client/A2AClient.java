@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pheonixhkbxoic.a2a4j.core.client.sse.SseEventReader;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientHTTPError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientJSONError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
@@ -33,7 +34,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * @author PheonixHkbxoic
  * @date 2025/4/12 18:44
- * @desc
+ * @desc a2a client
  */
 @Getter
 @Slf4j
@@ -64,34 +65,22 @@ public class A2AClient {
         }
     }
 
-    public SendTaskResponse sendTask(TaskSendParams params) {
+    public Mono<SendTaskResponse> sendTask(TaskSendParams params) {
         SendTaskRequest request = new SendTaskRequest(params);
-        Mono<JsonRpcResponse> responseMono = this.doSendRequest(request);
-        return responseMono.map(r -> {
-            TypeReference<SendTaskResponse> ref = new TypeReference<SendTaskResponse>() {
-            };
-            return objectMapper.convertValue(r, ref);
-        }).block();
+        return this.doSendRequest(request).map(r -> objectMapper.convertValue(r, new TypeReference<>() {
+        }));
     }
 
-    public GetTaskResponse getTask(TaskQueryParams params) {
+    public Mono<GetTaskResponse> getTask(TaskQueryParams params) {
         GetTaskRequest request = new GetTaskRequest(params);
-        Mono<JsonRpcResponse> responseMono = this.doSendRequest(request);
-        return responseMono.map(r -> {
-            TypeReference<GetTaskResponse> ref = new TypeReference<GetTaskResponse>() {
-            };
-            return objectMapper.convertValue(r, ref);
-        }).block();
+        return this.doSendRequest(request).map(r -> objectMapper.convertValue(r, new TypeReference<>() {
+        }));
     }
 
-    public CancelTaskResponse cancelTask(TaskIdParams params) {
+    public Mono<CancelTaskResponse> cancelTask(TaskIdParams params) {
         CancelTaskRequest request = new CancelTaskRequest(params);
-        Mono<JsonRpcResponse> responseMono = this.doSendRequest(request);
-        return responseMono.map(r -> {
-            TypeReference<CancelTaskResponse> ref = new TypeReference<CancelTaskResponse>() {
-            };
-            return objectMapper.convertValue(r, ref);
-        }).block();
+        return this.doSendRequest(request).map(r -> objectMapper.convertValue(r, new TypeReference<>() {
+        }));
     }
 
     public Flux<SendTaskStreamingResponse> sendTaskSubscribe(TaskSendParams params) {
@@ -104,7 +93,7 @@ public class A2AClient {
         return this.doSendRequestForSse(request);
     }
 
-    private Flux<SendTaskStreamingResponse> doSendRequestForSse(JsonRpcRequest request) {
+    private Flux<SendTaskStreamingResponse> doSendRequestForSse(JsonRpcRequest<?> request) {
         HttpPost httpPost = new HttpPost(agentCard.getUrl());
         try {
             StringEntity stringEntity = new StringEntity(objectMapper.writeValueAsString(request), StandardCharsets.UTF_8.name());
@@ -177,7 +166,7 @@ public class A2AClient {
     }
 
 
-    private Mono<JsonRpcResponse> doSendRequest(JsonRpcRequest request) {
+    private Mono<JsonRpcResponse<?>> doSendRequest(JsonRpcRequest<?> request) {
         HttpPost httpPost = new HttpPost(agentCard.getUrl());
         try {
             StringEntity stringEntity = new StringEntity(objectMapper.writeValueAsString(request), StandardCharsets.UTF_8.name());
@@ -193,10 +182,12 @@ public class A2AClient {
 
             HttpEntity entity = response.getEntity();
             String result = EntityUtils.toString(entity);
-            JsonRpcResponse rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
+            JsonRpcResponse<?> rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
             return Mono.just(rpcResponse);
         } catch (JacksonException e) {
             throw new A2AClientJSONError(e.getMessage());
+        } catch (A2AClientError e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

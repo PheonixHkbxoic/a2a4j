@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
@@ -46,7 +47,8 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
     private Validator validator;
     private PushNotificationSenderAuth auth;
 
-    private volatile boolean isClosing = false;
+    private volatile boolean isClosing = true;
+    private final A2AServer server;
 
     public WebfluxSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth auth) {
         this(new ObjectMapper(), null, null, agentCard, taskManager, validator, null, auth);
@@ -80,6 +82,7 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
                 )
                 .POST(this.messageEndpoint, this::handleMessage)
                 .build();
+        this.server = new A2AServer(this.agentCard, this);
     }
 
 
@@ -87,6 +90,16 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
     public Mono<Void> closeGracefully() {
         this.isClosing = true;
         return this.taskManager.closeGracefully();
+    }
+
+    @Override
+    public void start() {
+        this.isClosing = false;
+    }
+
+    @Override
+    public A2AServer getServer() {
+        return this.server;
     }
 
 

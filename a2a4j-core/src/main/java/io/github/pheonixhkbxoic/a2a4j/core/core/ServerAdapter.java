@@ -1,5 +1,6 @@
 package io.github.pheonixhkbxoic.a2a4j.core.core;
 
+import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import reactor.core.publisher.Mono;
 
 /**
@@ -13,4 +14,8 @@ public interface ServerAdapter {
     Mono<Void> closeGracefully();
 
     String EVENT_MESSAGE = "message";
+
+    void start();
+
+    A2AServer getServer();
 }
