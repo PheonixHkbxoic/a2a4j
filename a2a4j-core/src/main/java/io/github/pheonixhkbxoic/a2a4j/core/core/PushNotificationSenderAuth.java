@@ -1,6 +1,6 @@
 package io.github.pheonixhkbxoic.a2a4j.core.core;
 
-import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -12,19 +12,23 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.async.methods.SimpleHttpRequest;
+import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
+import org.apache.hc.client5.http.async.methods.SimpleRequestBuilder;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient;
+import org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder;
+import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
+import org.apache.hc.core5.concurrent.FutureCallback;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpStatus;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 /**
  * @author PheonixHkbxoic
@@ -35,9 +39,11 @@ public class PushNotificationSenderAuth extends PushNotificationAuth {
     private RSAKey jwk;
     @Getter
     private JWK publicKey;
+    private static CloseableHttpAsyncClient http;
 
     public PushNotificationSenderAuth() {
         this.generateJwk();
+        http = initHttpClient();
     }
 
     private void generateJwk() {
@@ -81,43 +87,49 @@ public class PushNotificationSenderAuth extends PushNotificationAuth {
     }
 
     public void sendPushNotification(String url, Object data) {
-        String token = null;
-        CloseableHttpResponse response;
-        try (CloseableHttpClient http = HttpClients.createDefault()) {
-            token = this.generateJwt(data);
-
-            HttpPost httpPost = new HttpPost(url);
-            httpPost.addHeader(AUTH_HEADER, AUTH_HEADER_PREFIX + token);
-
-            String json = objectMapper.writeValueAsString(data);
-            StringEntity stringEntity = new StringEntity(json, StandardCharsets.UTF_8.name());
-            stringEntity.setContentEncoding(StandardCharsets.UTF_8.name());
-            stringEntity.setContentType("application/json");
-            httpPost.setEntity(stringEntity);
-
-            response = http.execute(httpPost);
-
-            if (response.getStatusLine().getStatusCode() != 200) {
-                throw new RuntimeException(response.getStatusLine().getReasonPhrase());
-            }
-//            log.info("Push-notification sent for URL: {}, token: {}, data: {}", url, token, json);
-            log.info("Push-notification sent for URL: {}", url);
-        } catch (Exception e) {
-            log.warn("Error during sending push-notification for URL: {}, token: {}", url, token);
+        final String token = this.generateJwt(data);
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            log.warn("Error during sending push-notification for URL: {}, token: {}, error: {}", url, token, e.getMessage(), e);
+            return;
         }
+
+        SimpleHttpRequest request = SimpleRequestBuilder.post(url)
+                .addHeader(AUTH_HEADER, AUTH_HEADER_PREFIX + token)
+                .setBody(json, ContentType.APPLICATION_JSON)
+                .build();
+        http.execute(request, new FutureCallback<>() {
+            @Override
+            public void completed(SimpleHttpResponse simpleHttpResponse) {
+                log.info("Push-notification sent for URL: {}", url);
+            }
+
+            @Override
+            public void failed(Exception e) {
+                log.warn("Error during sending push-notification for URL: {}, token: {}", url, token);
+            }
+
+            @Override
+            public void cancelled() {
+
+            }
+        });
     }
 
     public static boolean verifyPushNotificationUrl(String url) {
-        CloseableHttpResponse response;
-        try (CloseableHttpClient http = HttpClients.createDefault()) {
+        try {
             String validationToken = Uuid.uuid4hex();
-            HttpGet request = new HttpGet(url + "?validationToken=" + validationToken);
-            response = http.execute(request);
-
-            if (response.getStatusLine().getStatusCode() != 200) {
-                throw new RuntimeException(response.getStatusLine().getReasonPhrase());
+            SimpleHttpRequest request = SimpleRequestBuilder.get(url + "?validationToken=" + validationToken).build();
+            Future<SimpleHttpResponse> future = http.execute(request, null);
+            SimpleHttpResponse response = future.get();
+            if (HttpStatus.SC_OK != response.getCode()) {
+                log.error("Error during receiving push-notification for URL {}, code: {}, error: {}",
+                        url, response.getCode(), response.getReasonPhrase());
+                return false;
             }
-            String content = EntityUtils.toString(response.getEntity());
+            String content = response.getBodyText();
             boolean isVerified = validationToken.equals(content);
             log.info("Verified push-notification URL: {} => {}", url, isVerified);
             return isVerified;
@@ -125,6 +137,24 @@ public class PushNotificationSenderAuth extends PushNotificationAuth {
             log.warn("Error during sending push-notification for URL {}: {}", url, e.getMessage());
         }
         return false;
+    }
+
+    private static CloseableHttpAsyncClient initHttpClient() {
+        RequestConfig requestConfig = RequestConfig.custom()
+//                .setSocketTimeout(30000).setConnectTimeout(30000).setConnectionRequestTimeout(5000)
+                .build();
+        HttpAsyncClientBuilder builder = HttpAsyncClients.custom().setDefaultRequestConfig(requestConfig);
+
+
+        // enable ssl
+
+        // enable proxy
+
+        // and so on
+
+        CloseableHttpAsyncClient client = builder.build();
+        client.start();
+        return client;
     }
 
 }

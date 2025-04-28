@@ -37,7 +37,7 @@
         <reactor.http.version>1.2.4</reactor.http.version>
         <assertj.version>3.26.3</assertj.version>
 
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>5.4.4</httpclient.version>
         <jose.verson>10.2</jose.verson>
     </properties>
 
@@ -173,11 +173,10 @@
                 <version>${springframework.version}</version>
             </dependency>
 
-
             <!-- other -->
             <dependency>
-                <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpclient</artifactId>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
                 <version>${httpclient.version}</version>
             </dependency>
             <dependency>

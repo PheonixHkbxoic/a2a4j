@@ -39,7 +39,7 @@ public class SseEventReader {
                         break;
 
                     case "data":
-                        if (sb.length() > 0) {
+                        if (!sb.isEmpty()) {
                             sb.append("\n");
                         }
                         sb.append(value.replaceFirst("^ +", ""));
@@ -54,14 +54,12 @@ public class SseEventReader {
                         break;
                 }
             }
-            reader.close();
         } catch (IOException e) {
             onError.accept(e);
         } finally {
             try {
                 reader.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (IOException ignored) {
             }
         }
     }

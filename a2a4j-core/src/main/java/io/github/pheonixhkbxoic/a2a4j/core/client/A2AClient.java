@@ -6,30 +6,33 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pheonixhkbxoic.a2a4j.core.client.sse.SseEventReader;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientHTTPError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.A2AClientJSONError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.async.methods.SimpleHttpRequest;
+import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
+import org.apache.hc.client5.http.async.methods.SimpleRequestBuilder;
+import org.apache.hc.client5.http.async.methods.SimpleResponseConsumer;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient;
+import org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder;
+import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
+import org.apache.hc.core5.concurrent.FutureCallback;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.nio.AsyncRequestProducer;
+import org.apache.hc.core5.http.nio.support.AsyncRequestBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Future;
 
 /**
  * @author PheonixHkbxoic
@@ -42,7 +45,7 @@ public class A2AClient {
     private final AgentCard agentCard;
     private final PushNotificationConfig pushNotificationConfig;
     @Getter(AccessLevel.PROTECTED)
-    private final transient CloseableHttpClient http;
+    private final transient CloseableHttpAsyncClient http;
     @Getter(AccessLevel.PROTECTED)
     private final transient ObjectMapper objectMapper = new ObjectMapper();
 
@@ -94,68 +97,42 @@ public class A2AClient {
     }
 
     private Flux<SendTaskStreamingResponse> doSendRequestForSse(JsonRpcRequest<?> request) {
-        HttpPost httpPost = new HttpPost(agentCard.getUrl());
         try {
-            StringEntity stringEntity = new StringEntity(objectMapper.writeValueAsString(request), StandardCharsets.UTF_8.name());
-            stringEntity.setContentEncoding(StandardCharsets.UTF_8.name());
-            stringEntity.setContentType("application/json");
-            httpPost.setEntity(stringEntity);
+            String body = objectMapper.writeValueAsString(request);
 
-            CloseableHttpResponse response = this.http.execute(httpPost);
-            int statusCode = response.getStatusLine().getStatusCode();
-            log.debug("doSendRequestForSse statusCode: {}", statusCode);
-            if (HttpStatus.SC_OK != statusCode) {
-                throw new A2AClientHTTPError(statusCode, response.getStatusLine().getReasonPhrase());
-            }
-
-            HttpEntity entity = response.getEntity();
-            BufferedReader buf = new BufferedReader(new InputStreamReader(entity.getContent()));
-            SseEventReader reader = new SseEventReader(buf);
-            boolean isSse = entity.getContentType().getValue().contains("text/event-stream");
-            log.debug("isSse: {}, contentType: {}", isSse, entity.getContentType());
+            AsyncRequestProducer requestProducer = AsyncRequestBuilder.post(agentCard.getUrl())
+                    .setEntity(body, ContentType.APPLICATION_JSON)
+                    .build();
+            Future<SimpleHttpResponse> future = this.http.execute(requestProducer, SimpleResponseConsumer.create(), null);
+            SimpleHttpResponse simpleHttpResponse = future.get();
+            boolean isSse = simpleHttpResponse.getContentType().getMimeType().contains("text/event-stream");
             if (isSse) {
+                ByteArrayInputStream bais = new ByteArrayInputStream(simpleHttpResponse.getBodyBytes());
+                BufferedReader buf = new BufferedReader(new InputStreamReader(bais));
+                SseEventReader reader = new SseEventReader(buf);
                 return Flux.<SendTaskStreamingResponse>create(sink -> {
-                            reader.onEvent(sseEvent -> {
-                                log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
-                                if (!sseEvent.hasData()) {
-                                    return;
-                                }
-                                SendTaskStreamingResponse sendTaskStreamingResponse;
-                                try {
-                                    sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
-                                } catch (JsonProcessingException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                sink.next(sendTaskStreamingResponse);
-                                UpdateEvent event = sendTaskStreamingResponse.getResult();
-                                if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
-                                    sink.complete();
-                                }
-                            }, sink::error);
-                        })
-                        .doOnError(e -> {
-                            log.warn("doSendRequestForSse exception: {}", e.getMessage());
-                            try {
-                                buf.close();
-                                response.close();
-                                EntityUtils.consume(entity);
-                            } catch (IOException ignored) {
-
-                            }
-                        })
-                        .doOnComplete(() -> {
-                            try {
-                                buf.close();
-                                response.close();
-                                EntityUtils.consume(entity);
-                            } catch (IOException ignored) {
-
-                            }
-                        });
+                    reader.onEvent(sseEvent -> {
+                        log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
+                        if (!sseEvent.hasData()) {
+                            return;
+                        }
+                        SendTaskStreamingResponse sendTaskStreamingResponse;
+                        try {
+                            sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                        sink.next(sendTaskStreamingResponse);
+                        UpdateEvent event = sendTaskStreamingResponse.getResult();
+                        if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
+                            sink.complete();
+                        }
+                    }, sink::error);
+                });
             }
 
             // non sse
-            String json = EntityUtils.toString(entity);
+            String json = simpleHttpResponse.getBodyText();
             SendTaskStreamingResponse sendTaskStreamingResponse = objectMapper.readValue(json, SendTaskStreamingResponse.class);
             return Flux.just(sendTaskStreamingResponse);
         } catch (JacksonException e) {
@@ -167,38 +144,54 @@ public class A2AClient {
 
 
     private Mono<JsonRpcResponse<?>> doSendRequest(JsonRpcRequest<?> request) {
-        HttpPost httpPost = new HttpPost(agentCard.getUrl());
-        try {
-            StringEntity stringEntity = new StringEntity(objectMapper.writeValueAsString(request), StandardCharsets.UTF_8.name());
-            stringEntity.setContentEncoding(StandardCharsets.UTF_8.name());
-            stringEntity.setContentType("application/json");
-            httpPost.setEntity(stringEntity);
-
-            CloseableHttpResponse response = this.http.execute(httpPost);
-            int statusCode = response.getStatusLine().getStatusCode();
-            if (HttpStatus.SC_OK != statusCode) {
-                throw new A2AClientHTTPError(statusCode, response.getStatusLine().getReasonPhrase());
+        return Mono.create(sink -> {
+            String body;
+            try {
+                body = objectMapper.writeValueAsString(request);
+            } catch (JacksonException e) {
+                sink.error(e);
+                return;
             }
 
-            HttpEntity entity = response.getEntity();
-            String result = EntityUtils.toString(entity);
-            JsonRpcResponse<?> rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
-            return Mono.just(rpcResponse);
-        } catch (JacksonException e) {
-            throw new A2AClientJSONError(e.getMessage());
-        } catch (A2AClientError e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            SimpleHttpRequest simpleHttpRequest = SimpleRequestBuilder.post(agentCard.getUrl())
+                    .setBody(body, ContentType.APPLICATION_JSON)
+                    .build();
+            this.http.execute(simpleHttpRequest, new FutureCallback<>() {
+                @Override
+                public void completed(SimpleHttpResponse response) {
+                    int statusCode = response.getCode();
+                    if (HttpStatus.SC_OK != statusCode) {
+                        sink.error(new A2AClientHTTPError(statusCode, response.getReasonPhrase()));
+                        return;
+                    }
+                    try {
+                        String result = response.getBodyText();
+                        JsonRpcResponse<?> rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
+                        sink.success(rpcResponse);
+                    } catch (JacksonException e) {
+                        sink.error(e);
+                    }
+                }
+
+                @Override
+                public void failed(Exception e) {
+                    sink.error(e.getCause());
+                }
+
+                @Override
+                public void cancelled() {
+                    sink.success();
+                }
+            });
+        });
     }
 
 
-    private CloseableHttpClient initHttpClient() {
+    private CloseableHttpAsyncClient initHttpClient() {
         RequestConfig requestConfig = RequestConfig.custom()
 //                .setSocketTimeout(30000).setConnectTimeout(30000).setConnectionRequestTimeout(5000)
                 .build();
-        HttpClientBuilder builder = HttpClients.custom().setDefaultRequestConfig(requestConfig);
+        HttpAsyncClientBuilder builder = HttpAsyncClients.custom().setDefaultRequestConfig(requestConfig);
 
 
         // enable ssl
@@ -207,7 +200,9 @@ public class A2AClient {
 
         // and so on
 
-        return builder.build();
+        CloseableHttpAsyncClient client = builder.build();
+        client.start();
+        return client;
     }
 
 }

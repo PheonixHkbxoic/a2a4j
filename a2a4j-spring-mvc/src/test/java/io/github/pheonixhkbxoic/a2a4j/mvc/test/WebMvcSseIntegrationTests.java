@@ -185,6 +185,7 @@ public class WebMvcSseIntegrationTests {
     @Test
     public void testInitialize() {
         A2AServer server = new A2AServer(agentCard, serverTransportProvider);
+        server.start();
         AgentCardResolver resolver = new AgentCardResolver(baseUrl);
         AgentCard serverAgentCard = resolver.resolve();
         assertThat(serverAgentCard).isNotNull();

@@ -70,7 +70,8 @@ public class WebfluxSseTaskTests {
         try {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, webFluxSseServerAdapter);
-
+            server.start();
+            
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
             assertThat(serverAgentCard).isNotNull();

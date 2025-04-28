@@ -147,6 +147,7 @@ public class WebMvcSseTaskTests {
         try {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, serverTransportProvider);
+            server.start();
 
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
@@ -193,6 +194,7 @@ public class WebMvcSseTaskTests {
         params.setId("1");
         params.setHistoryLength(3);
         GetTaskResponse taskResponse = client.getTask(params).block();
+        assertThat(taskResponse).isNotNull();
         JsonRpcError error = taskResponse.getError();
         assertThat(error).isNotNull().extracting("code").isEqualTo(new TaskNotFoundError().getCode());
     }
