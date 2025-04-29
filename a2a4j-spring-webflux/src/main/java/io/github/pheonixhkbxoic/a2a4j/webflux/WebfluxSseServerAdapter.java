@@ -12,6 +12,7 @@ import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import lombok.Data;
@@ -134,9 +135,6 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
                             throw new IllegalArgumentException("body is empty");
                         }
                         JsonRpcRequest<Object> req = om.readValue(body, JsonRpcRequest.class);
-                        if (validator != null) {
-                            validator.validate(req);
-                        }
 
                         // streaming request
                         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(req.getMethod())
@@ -148,13 +146,13 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
                         return handleRequest(req);
                     } catch (JacksonException e) {
                         log.error("json parse error: {}", e.getMessage(), e);
-                        return ServerResponse.badRequest().bodyValue(new JSONParseError());
+                        return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue(Util.toJson(new JSONParseError()));
                     } catch (IllegalArgumentException | IllegalStateException | ValidationException e) {
                         log.error("invalid request error: {}", e.getMessage(), e);
-                        return ServerResponse.badRequest().bodyValue(new InvalidRequestError());
+                        return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue(Util.toJson(new InvalidRequestError()));
                     } catch (Exception e) {
                         log.error("handle request error: {}", e.getMessage(), e);
-                        return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).bodyValue(new InternalError());
+                        return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).bodyValue(Util.toJson(new InternalError()));
                     }
 
                 });
@@ -164,13 +162,15 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
         Mono<? extends JsonRpcResponse<?>> monoResponse;
         String taskId;
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            SendTaskStreamingRequest req = om.convertValue(request, new TypeReference<SendTaskStreamingRequest>() {
+            SendTaskStreamingRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onSendTaskSubscribe(req);
             taskId = req.getParams().getId();
         } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            TaskResubscriptionRequest req = om.convertValue(request, new TypeReference<TaskResubscriptionRequest>() {
+            TaskResubscriptionRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onResubscribeTask(req);
             taskId = req.getParams().getId();
         } else {
@@ -219,21 +219,24 @@ public class WebfluxSseServerAdapter implements ServerAdapter {
     public <T> Mono<ServerResponse> handleRequest(JsonRpcRequest<T> request) {
         Mono<? extends JsonRpcResponse<?>> response;
         if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
+            GetTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onGetTask(req);
         } else if (new SendTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            SendTaskRequest req = om.convertValue(request, new TypeReference<SendTaskRequest>() {
+            SendTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onSendTask(req);
         } else if (new CancelTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            CancelTaskRequest req = om.convertValue(request, new TypeReference<CancelTaskRequest>() {
+            CancelTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onCancelTask(req);
         } else {
             response = Mono.fromSupplier(() -> new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
         }
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response, JsonRpcResponse.class);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response.map(Util::toJson), JsonRpcResponse.class);
     }
 
 

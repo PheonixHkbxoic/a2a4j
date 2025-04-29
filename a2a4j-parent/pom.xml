@@ -31,8 +31,9 @@
 
         <tomcat.version>10.1.40</tomcat.version>
         <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
-        <jarkarta.validation.version>3.1.1</jarkarta.validation.version>
-        <validator.version>6.2.5.Final</validator.version>
+        <jakarta.validation.version>3.0.2</jakarta.validation.version>
+        <jakarta.el.version>4.0.2</jakarta.el.version>
+        <validator.version>8.0.2.Final</validator.version>
         <reactor.version>3.7.4</reactor.version>
         <reactor.http.version>1.2.4</reactor.http.version>
         <assertj.version>3.26.3</assertj.version>
@@ -135,14 +136,19 @@
             <dependency>
                 <groupId>jakarta.validation</groupId>
                 <artifactId>jakarta.validation-api</artifactId>
-                <version>${jarkarta.validation.version}</version>
+                <version>${jakarta.validation.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${validator.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.glassfish</groupId>
+                <artifactId>jakarta.el</artifactId>
+                <version>${jakarta.el.version}</version>
+                <scope>compile</scope>
+            </dependency>
 
             <!-- spring -->
             <dependency>

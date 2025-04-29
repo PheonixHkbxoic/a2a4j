@@ -30,5 +30,14 @@
             <artifactId>a2a4j-core</artifactId>
             <version>2.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.glassfish/jakarta.el -->
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.el</artifactId>
+        </dependency>
     </dependencies>
 </project>

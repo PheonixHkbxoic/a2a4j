@@ -17,6 +17,7 @@ import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskResponse;
 import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -29,9 +30,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
@@ -51,7 +52,6 @@ public class WebMvcSseTaskTests {
 
 
     @Configuration
-    @EnableWebMvc
     static class TestConfig {
 
         @Bean
@@ -89,8 +89,13 @@ public class WebMvcSseTaskTests {
         }
 
         @Bean
-        public WebMvcSseServerAdapter webMvcSseServerAdapter() {
-            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null, pushNotificationSenderAuth());
+        public LocalValidatorFactoryBean validator() {
+            return new LocalValidatorFactoryBean();
+        }
+
+        @Bean
+        public WebMvcSseServerAdapter webMvcSseServerAdapter(Validator validator) {
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), validator, pushNotificationSenderAuth());
         }
 
         @Bean

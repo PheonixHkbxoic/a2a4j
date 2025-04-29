@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Future;
 
 /**
@@ -131,6 +132,11 @@ public class A2AClient {
                 });
             }
 
+            int statusCode = simpleHttpResponse.getCode();
+            if (HttpStatus.SC_OK != statusCode) {
+                String inValidRequestParam = new String(simpleHttpResponse.getBodyBytes(), StandardCharsets.UTF_8);
+                return Flux.error(new A2AClientHTTPError(statusCode, inValidRequestParam));
+            }
             // non sse
             String json = simpleHttpResponse.getBodyText();
             SendTaskStreamingResponse sendTaskStreamingResponse = objectMapper.readValue(json, SendTaskStreamingResponse.class);
@@ -161,11 +167,12 @@ public class A2AClient {
                 public void completed(SimpleHttpResponse response) {
                     int statusCode = response.getCode();
                     if (HttpStatus.SC_OK != statusCode) {
-                        sink.error(new A2AClientHTTPError(statusCode, response.getReasonPhrase()));
+                        String body = new String(response.getBodyBytes(), StandardCharsets.UTF_8);
+                        sink.error(new A2AClientHTTPError(statusCode, body));
                         return;
                     }
                     try {
-                        String result = response.getBodyText();
+                        String result = new String(response.getBodyBytes(), StandardCharsets.UTF_8);
                         JsonRpcResponse<?> rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
                         sink.success(rpcResponse);
                     } catch (JacksonException e) {

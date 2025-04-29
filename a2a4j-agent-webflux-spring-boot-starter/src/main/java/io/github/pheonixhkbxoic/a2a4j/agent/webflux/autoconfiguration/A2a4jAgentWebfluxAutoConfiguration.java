@@ -5,6 +5,7 @@ import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.webflux.WebfluxSseServerAdapter;
+import jakarta.validation.Validator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -32,12 +33,12 @@ public class A2a4jAgentWebfluxAutoConfiguration {
     public InMemoryTaskStore inMemoryTaskStore() {
         return new InMemoryTaskStore();
     }
-    
+
     @ConditionalOnMissingBean(ServerAdapter.class)
     @ConditionalOnClass(ServerAdapter.class)
     @Bean
-    public WebfluxSseServerAdapter webfluxSseServerAdapter(AgentCard agentCard, TaskManager taskManager, PushNotificationSenderAuth pushNotificationSenderAuth) {
-        return new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
+    public WebfluxSseServerAdapter webfluxSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth pushNotificationSenderAuth) {
+        return new WebfluxSseServerAdapter(agentCard, taskManager, validator, pushNotificationSenderAuth);
     }
 
     @ConditionalOnMissingBean(A2AServer.class)

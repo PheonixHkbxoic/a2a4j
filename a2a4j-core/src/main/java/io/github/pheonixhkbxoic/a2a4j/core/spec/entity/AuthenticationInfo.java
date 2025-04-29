@@ -1,6 +1,7 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
 import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,8 +19,8 @@ import java.util.List;
 @Data
 public class AuthenticationInfo implements Serializable {
 
-//    model_config = ConfigDict(extra="allow")
-
+    //    model_config = ConfigDict(extra="allow")
+    @NotEmpty
     private List<String> schemes;
     @Nullable
     private String credentials;

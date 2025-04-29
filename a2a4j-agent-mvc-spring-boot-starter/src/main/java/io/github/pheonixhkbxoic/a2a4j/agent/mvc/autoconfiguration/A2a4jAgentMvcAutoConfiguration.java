@@ -5,6 +5,7 @@ import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import jakarta.validation.Validator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -36,8 +37,8 @@ public class A2a4jAgentMvcAutoConfiguration {
     @ConditionalOnMissingBean(ServerAdapter.class)
     @ConditionalOnClass(ServerAdapter.class)
     @Bean
-    public WebMvcSseServerAdapter webMvcSseServerAdapter(AgentCard agentCard, TaskManager taskManager, PushNotificationSenderAuth pushNotificationSenderAuth) {
-        return new WebMvcSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
+    public WebMvcSseServerAdapter webMvcSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth pushNotificationSenderAuth) {
+        return new WebMvcSseServerAdapter(agentCard, taskManager, validator, pushNotificationSenderAuth);
     }
 
     @ConditionalOnMissingBean(A2AServer.class)

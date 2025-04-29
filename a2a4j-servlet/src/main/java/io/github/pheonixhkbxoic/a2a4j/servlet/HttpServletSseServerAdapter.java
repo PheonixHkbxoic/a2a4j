@@ -14,6 +14,7 @@ import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -168,13 +169,15 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         Mono<? extends JsonRpcResponse<?>> monoResponse;
         String taskId;
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(rpcRequest.getMethod())) {
-            SendTaskStreamingRequest req = om.convertValue(rpcRequest, new TypeReference<SendTaskStreamingRequest>() {
+            SendTaskStreamingRequest req = om.convertValue(rpcRequest, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onSendTaskSubscribe(req);
             taskId = req.getParams().getId();
         } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(rpcRequest.getMethod())) {
-            TaskResubscriptionRequest req = om.convertValue(rpcRequest, new TypeReference<TaskResubscriptionRequest>() {
+            TaskResubscriptionRequest req = om.convertValue(rpcRequest, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onResubscribeTask(req);
             taskId = req.getParams().getId();
         } else {
@@ -223,16 +226,19 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     public <T> void handleRequest(HttpServletResponse httpServletResponse, JsonRpcRequest<T> request) throws IOException {
         Mono<? extends JsonRpcResponse<?>> response;
         if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
+            GetTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onGetTask(req);
         } else if (new SendTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            SendTaskRequest req = om.convertValue(request, new TypeReference<SendTaskRequest>() {
+            SendTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onSendTask(req);
         } else if (new CancelTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            CancelTaskRequest req = om.convertValue(request, new TypeReference<CancelTaskRequest>() {
+            CancelTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onCancelTask(req);
         } else {
             response = Mono.just(new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));

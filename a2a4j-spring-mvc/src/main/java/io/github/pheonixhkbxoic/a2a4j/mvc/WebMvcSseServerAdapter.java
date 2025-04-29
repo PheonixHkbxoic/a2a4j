@@ -8,15 +8,18 @@ import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -115,12 +118,10 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
             return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).body("Server is shutting down");
         }
 
+        JsonRpcRequest<Object> req = null;
         try {
             String body = request.body(String.class);
-            JsonRpcRequest<Object> req = om.readValue(body, JsonRpcRequest.class);
-            if (validator != null) {
-                validator.validate(req);
-            }
+            req = om.readValue(body, JsonRpcRequest.class);
 
             // streaming request
             if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(req.getMethod())
@@ -132,15 +133,22 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
             return handleRequest(req);
         } catch (JacksonException e) {
             log.error("json parse error: {}", e.getMessage(), e);
-            return ServerResponse.badRequest().body(new JSONParseError());
+            return ServerResponse.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Util.toJson(new JSONParseError()));
         } catch (IllegalArgumentException | IllegalStateException | ValidationException e) {
             log.error("invalid request error: {}", e.getMessage(), e);
-            return ServerResponse.badRequest().body(new InvalidRequestError());
+            return ServerResponse.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Util.toJson(new InvalidRequestError(e.getMessage())));
         } catch (Exception e) {
             log.error("handle request error: {}", e.getMessage(), e);
-            return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new InternalError());
+            return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Util.toJson(new InternalError()));
         }
     }
+
 
     public <T> ServerResponse handleRequestSse(JsonRpcRequest<T> request) {
         Mono<? extends JsonRpcResponse<?>> monoResponse;
@@ -148,11 +156,13 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
         if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             SendTaskStreamingRequest req = om.convertValue(request, new TypeReference<SendTaskStreamingRequest>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onSendTaskSubscribe(req);
             taskId = req.getParams().getId();
         } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
             TaskResubscriptionRequest req = om.convertValue(request, new TypeReference<TaskResubscriptionRequest>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onResubscribeTask(req);
             taskId = req.getParams().getId();
         } else {
@@ -163,7 +173,7 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
         // exception return rpcResponse
         JsonRpcResponse<?> rpcResponse = monoResponse.block();
         if (rpcResponse != null) {
-            return ServerResponse.ok().body(rpcResponse);
+            return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(Util.toJson(rpcResponse));
         }
 
         // sse response
@@ -198,21 +208,24 @@ public class WebMvcSseServerAdapter implements ServerAdapter {
     public <T> ServerResponse handleRequest(JsonRpcRequest<T> request) {
         Mono<? extends JsonRpcResponse<?>> response;
         if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
+            GetTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onGetTask(req);
         } else if (new SendTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            SendTaskRequest req = om.convertValue(request, new TypeReference<SendTaskRequest>() {
+            SendTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onSendTask(req);
         } else if (new CancelTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            CancelTaskRequest req = om.convertValue(request, new TypeReference<CancelTaskRequest>() {
+            CancelTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onCancelTask(req);
         } else {
             response = Mono.fromSupplier(() -> new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
         }
-        return ServerResponse.ok().body(response);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response.map(Util::toJson));
     }
 
 

@@ -16,6 +16,12 @@ import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -28,15 +34,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,7 +59,6 @@ public class WebMvcSseIntegrationTests {
 
 
     @Configuration
-    @EnableWebMvc
     static class TestConfig {
 
         @Bean
@@ -108,8 +114,13 @@ public class WebMvcSseIntegrationTests {
         }
 
         @Bean
-        public WebMvcSseServerAdapter webMvcSseServerTransportProvider() {
-            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null, pushNotificationSenderAuth());
+        public LocalValidatorFactoryBean validator() {
+            return new LocalValidatorFactoryBean();
+        }
+
+        @Bean
+        public WebMvcSseServerAdapter webMvcSseServerTransportProvider(Validator validator) {
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), validator, pushNotificationSenderAuth());
         }
 
         @Bean
@@ -198,5 +209,47 @@ public class WebMvcSseIntegrationTests {
         log.info("serverAgentCard: {}", serverAgentCard);
         server.close();
     }
+
+
+    @Data
+    class User {
+        @NotBlank
+        private String id;
+
+        @Valid
+        @NotNull
+        private User2 user2;
+
+        public User(String id, User2 user2) {
+            this.id = id;
+            this.user2 = user2;
+        }
+
+    }
+
+    class User2 {
+        @NotBlank
+        private String id;
+
+
+        public User2(String id) {
+            this.id = id;
+        }
+    }
+
+    @Test
+    public void testValidator() {
+        Validator validator = appContext.getBean(Validator.class);
+        Set<ConstraintViolation<User>> s1 = validator.validate(new User(null, null));
+        assertThat(s1).isNotEmpty();
+        Set<ConstraintViolation<User>> s2 = validator.validate(new User("1", null));
+        assertThat(s2).isNotEmpty();
+        Set<ConstraintViolation<User>> s3 = validator.validate(new User("1", new User2(null)));
+        assertThat(s3).isNotEmpty();
+        Set<ConstraintViolation<User>> s4 = validator.validate(new User("1", new User2("11")));
+        assertThat(s4).isEmpty();
+
+    }
+
 
 }
