@@ -1,5 +1,6 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Method;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskIdParams;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,7 +14,7 @@ import lombok.ToString;
 @Data
 public class CancelTaskRequest extends JsonRpcRequest<TaskIdParams> {
     public CancelTaskRequest() {
-        this.setMethod("tasks/cancel");
+        this.setMethod(Method.TASKS_CANCEL);
     }
 
     public CancelTaskRequest(TaskIdParams params) {

@@ -34,6 +34,13 @@ public class A2a4jAgentWebfluxAutoConfiguration {
         return new InMemoryTaskStore();
     }
 
+    @ConditionalOnMissingBean(TaskManager.class)
+    @ConditionalOnClass(TaskManager.class)
+    @Bean
+    public TaskManager inMemoryTaskManager(AgentInvoker agentInvoker) {
+        return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker);
+    }
+
     @ConditionalOnMissingBean(ServerAdapter.class)
     @ConditionalOnClass(ServerAdapter.class)
     @Bean
@@ -44,8 +51,8 @@ public class A2a4jAgentWebfluxAutoConfiguration {
     @ConditionalOnMissingBean(A2AServer.class)
     @ConditionalOnClass(A2AServer.class)
     @Bean
-    public A2AServer a2aServer(WebfluxSseServerAdapter webfluxSseServerAdapter) {
-        return webfluxSseServerAdapter.getServer().start();
+    public A2AServer a2aServer(ServerAdapter serverAdapter) {
+        return serverAdapter.getServer().start();
     }
 
     @Bean

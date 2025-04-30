@@ -113,7 +113,7 @@ public class A2AClient {
                 SseEventReader reader = new SseEventReader(buf);
                 return Flux.<SendTaskStreamingResponse>create(sink -> {
                     reader.onEvent(sseEvent -> {
-                        log.debug("doSendRequestForSse sseEvent: {}", sseEvent);
+                        log.debug("doSendRequestForSse received: {}", sseEvent);
                         if (!sseEvent.hasData()) {
                             return;
                         }
@@ -165,15 +165,14 @@ public class A2AClient {
             this.http.execute(simpleHttpRequest, new FutureCallback<>() {
                 @Override
                 public void completed(SimpleHttpResponse response) {
+                    String body = new String(response.getBodyBytes(), StandardCharsets.UTF_8);
                     int statusCode = response.getCode();
                     if (HttpStatus.SC_OK != statusCode) {
-                        String body = new String(response.getBodyBytes(), StandardCharsets.UTF_8);
                         sink.error(new A2AClientHTTPError(statusCode, body));
                         return;
                     }
                     try {
-                        String result = new String(response.getBodyBytes(), StandardCharsets.UTF_8);
-                        JsonRpcResponse<?> rpcResponse = objectMapper.readValue(result, JsonRpcResponse.class);
+                        JsonRpcResponse<?> rpcResponse = objectMapper.readValue(body, JsonRpcResponse.class);
                         sink.success(rpcResponse);
                     } catch (JacksonException e) {
                         sink.error(e);

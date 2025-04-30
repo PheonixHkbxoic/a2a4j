@@ -21,7 +21,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.36</lombok.version>
         <jackson.version>2.18.3</jackson.version>
-        <logback.version>1.2.11</logback.version>
+        <logback.version>1.5.18</logback.version>
         <jupiter.version>5.13.0-M2</jupiter.version>
         <mockito.version>5.17.0</mockito.version>
 
@@ -36,6 +36,7 @@
         <validator.version>8.0.2.Final</validator.version>
         <reactor.version>3.7.4</reactor.version>
         <reactor.http.version>1.2.4</reactor.http.version>
+        <netty.version>4.1.119.Final</netty.version>
         <assertj.version>3.26.3</assertj.version>
 
         <httpclient.version>5.4.4</httpclient.version>
@@ -178,7 +179,21 @@
                 <artifactId>spring-webflux</artifactId>
                 <version>${springframework.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-webflux</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
             <!-- other -->
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>

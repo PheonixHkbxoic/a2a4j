@@ -4,17 +4,11 @@
 package io.github.pheonixhkbxoic.a2a4j.mvc.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCapabilities;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentSkill;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
@@ -39,7 +33,6 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
-import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,24 +81,18 @@ public class WebMvcSseIntegrationTests {
         }
 
         @Bean
+        public EchoAgent echoAgent() {
+            return new EchoAgent();
+        }
+
+        @Bean
+        public AgentInvoker agentInvoker() {
+            return new EchoAgentInvoker(echoAgent());
+        }
+
+        @Bean
         public TaskManager taskManager() {
-            return new InMemoryTaskManager(inMemoryTaskStore(), new PushNotificationSenderAuth()) {
-                @Override
-                public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
-                    log.info("sendTaskRequest: {}", request);
-                    return Mono.just(new SendTaskResponse(Task.builder().build()));
-                }
-
-                @Override
-                public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
-                }
-
-                @Override
-                public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
-                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
-                }
-            };
+            return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker());
         }
 
         @Bean

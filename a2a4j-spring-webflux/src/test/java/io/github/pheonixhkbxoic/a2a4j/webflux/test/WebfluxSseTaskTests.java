@@ -5,8 +5,7 @@ package io.github.pheonixhkbxoic.a2a4j.webflux.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JsonRpcError;
@@ -58,12 +57,8 @@ public class WebfluxSseTaskTests {
 
     @BeforeEach
     public void before() {
-        InMemoryTaskStore taskStore = new InMemoryTaskStore();
-        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
-        EchoAgent echoAgent = new EchoAgent();
         AgentCard agentCard = agentCard();
-        EchoTaskManager taskManager = new EchoTaskManager(taskStore, pushNotificationSenderAuth, echoAgent);
-        WebfluxSseServerAdapter webFluxSseServerAdapter = new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
+        WebfluxSseServerAdapter webFluxSseServerAdapter = getWebfluxSseServerAdapter(agentCard);
         HttpHandler httpHandler = RouterFunctions.toHttpHandler(webFluxSseServerAdapter.getRouterFunction());
         ReactorHttpHandlerAdapter adapter = new ReactorHttpHandlerAdapter(httpHandler);
         this.httpServer = HttpServer.create().port(PORT).handle(adapter).bindNow();
@@ -83,6 +78,15 @@ public class WebfluxSseTaskTests {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static WebfluxSseServerAdapter getWebfluxSseServerAdapter(AgentCard agentCard) {
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
+        EchoAgent echoAgent = new EchoAgent();
+        AgentInvoker agentInvoker = new EchoAgentInvoker(echoAgent);
+        TaskManager taskManager = new InMemoryTaskManager(taskStore, pushNotificationSenderAuth, agentInvoker);
+        return new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
     }
 
     @AfterEach

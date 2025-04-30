@@ -34,6 +34,13 @@ public class A2a4jAgentMvcAutoConfiguration {
         return new InMemoryTaskStore();
     }
 
+    @ConditionalOnMissingBean(TaskManager.class)
+    @ConditionalOnClass(TaskManager.class)
+    @Bean
+    public TaskManager inMemoryTaskManager(AgentInvoker agentInvoker) {
+        return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker);
+    }
+
     @ConditionalOnMissingBean(ServerAdapter.class)
     @ConditionalOnClass(ServerAdapter.class)
     @Bean

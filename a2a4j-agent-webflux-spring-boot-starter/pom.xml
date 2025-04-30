@@ -11,7 +11,7 @@
     <artifactId>a2a4j-agent-webflux-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
 
-    <name>a2a4j-agent-webflux-spring-boot-starter</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>a2a4j-agent-webflux-spring-boot-starter</description>
     <url>http://github.com/PheonixHkbxoic/a2a4j</url>
 
@@ -32,8 +32,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <version>${springboot.version}</version>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
     </dependencies>
 </project>

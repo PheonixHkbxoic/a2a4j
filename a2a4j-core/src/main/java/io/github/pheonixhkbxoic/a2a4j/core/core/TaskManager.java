@@ -14,15 +14,15 @@ public interface TaskManager {
 
     Mono<SendTaskResponse> onSendTask(SendTaskRequest request);
 
+    Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request);
+
     Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request);
 
-    Mono<CancelTaskResponse> onCancelTask(CancelTaskRequest request);
+    Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request);
 
     Mono<GetTaskPushNotificationResponse> onGetTaskPushNotification(GetTaskPushNotificationRequest request);
 
     Mono<SetTaskPushNotificationResponse> onSetTaskPushNotification(SetTaskPushNotificationRequest request);
-
-    Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request);
 
     Flux<UpdateEvent> dequeueEvent(String taskId);
 

@@ -1,20 +1,22 @@
 package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskStore;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskRequest;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskResponse;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.SendTaskStreamingRequest;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author PheonixHkbxoic
@@ -25,13 +27,10 @@ public class TestTaskManager {
 
     @Test
     public void testEchoTaskManager() {
-        InMemoryTaskStore taskStore = new InMemoryTaskStore();
-        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
-        EchoAgent agent = new EchoAgent();
-        EchoTaskManager echo = new EchoTaskManager(taskStore, pushNotificationSenderAuth, agent);
+        TaskManager taskManager = getTaskManager();
 
         SendTaskRequest request = new SendTaskRequest();
-        Map<String, Object> metadata = new HashMap<String, Object>() {{
+        Map<String, Object> metadata = new HashMap<>() {{
             put("from", "user");
             put("target", "test");
             put("other", 1);
@@ -45,65 +44,80 @@ public class TestTaskManager {
                 .historyLength(5)
                 .message(message)
                 .build();
+
+        // onSendTask
         request.setParams(params);
-        SendTaskResponse response = echo.onSendTask(request).block();
+        SendTaskResponse response = taskManager.onSendTask(request).block();
         assert response != null;
         log.info("response: {}", response.getResult().getArtifacts().stream()
                 .flatMap(a -> a.getParts().stream())
                 .filter(p -> p instanceof TextPart)
                 .map(p -> ((TextPart) p).getText())
                 .collect(Collectors.joining()));
+
+        SendTaskStreamingRequest requestStream = new SendTaskStreamingRequest(params);
+        taskManager.onSendTaskSubscribe(requestStream)
+                .switchIfEmpty(Mono.fromRunnable(() -> {
+                    taskManager.dequeueEvent(params.getId())
+                            .subscribe(updateEvent -> {
+                                if (updateEvent instanceof TaskStatusUpdateEvent statusUpdateEvent) {
+                                    TaskStatus status = statusUpdateEvent.getStatus();
+                                    TaskState state = status.getState();
+                                    LocalDateTime timestamp = status.getTimestamp();
+                                    Message m = status.getMessage();
+                                    String text = Stream.ofNullable(m)
+                                            .filter(Objects::nonNull)
+                                            .flatMap(t -> t.getParts().stream())
+                                            .filter(p -> p instanceof TextPart)
+                                            .map(t -> ((TextPart) t).getText())
+                                            .filter(t -> !Util.isEmpty(t))
+                                            .collect(Collectors.joining("\n"));
+                                    log.info("status event: {}, {}, {}", state, timestamp.format(DateTimeFormatter.ISO_DATE_TIME), text);
+                                } else if (updateEvent instanceof TaskArtifactUpdateEvent artifactUpdateEvent) {
+                                    Artifact artifact = artifactUpdateEvent.getArtifact();
+                                    String text = Stream.ofNullable(artifact)
+                                            .filter(Objects::nonNull)
+                                            .flatMap(t -> t.getParts().stream())
+                                            .filter(p -> p instanceof TextPart)
+                                            .map(t -> ((TextPart) t).getText())
+                                            .collect(Collectors.joining("\n"));
+                                    log.info("artifact event: {}", text);
+                                }
+                            });
+                }))
+                .block();
     }
 
-    @Test
-    public void testQueue() {
-        InMemoryTaskManager manager = new InMemoryTaskManager(new InMemoryTaskStore(), new PushNotificationSenderAuth()) {
+    private static TaskManager getTaskManager() {
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
+        EchoAgent agent = new EchoAgent();
+        return new InMemoryTaskManager(taskStore, pushNotificationSenderAuth, new AgentInvoker() {
             @Override
-            public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
-                return Mono.empty();
-            }
-
-            @Override
-            public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-                final String taskId = Uuid.uuid4hex();
-                this.initEventQueue(taskId, false);
-
-                log.info("enqueue flux push before: {}", taskId);
-                Flux.<Integer>push(sink -> {
-                            for (int i = 0; i < 10; i++) {
-                                sink.next(i + 1);
-                            }
-                            sink.complete();
-                        })
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .subscribe(n -> {
-                            log.info("enqueue n: {}", n);
-                            TaskStatusUpdateEvent e = new TaskStatusUpdateEvent(new TaskStatus(TaskState.WORKING), n == 10);
-                            e.setMetadata(Collections.singletonMap("n", n));
-                            this.enqueueEvent(taskId, e);
+            public Mono<List<Artifact>> invoke(SendTaskRequest request) {
+                String userQuery = this.extractUserQuery(request.getParams());
+                return agent.chat(userQuery)
+                        .map(text -> {
+                            Artifact artifact = Artifact.builder().name("answer").parts(List.of(new TextPart(text))).build();
+                            return List.of(artifact);
                         });
-                log.info("enqueue flux subscribe after: {}", taskId);
-
-                this.dequeueEvent(taskId)
-                        .subscribe(e -> log.info("dequeue subscribe, n: {}", e.getMetadata().get("n")));
-                log.info("dequeue flux subscribe after: {}", taskId);
-
-                try {
-                    TimeUnit.SECONDS.sleep(10);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                return null;
             }
 
             @Override
-            public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
-                return null;
+            public Flux<StreamData> invokeStream(SendTaskStreamingRequest request) {
+                String userQuery = this.extractUserQuery(request.getParams());
+                return agent.chatStream(userQuery)
+                        .map(text -> {
+                            Message message = Message.builder().role(Role.AGENT).parts(List.of(new TextPart(text))).build();
+                            return StreamData.builder().state(TaskState.WORKING).message(message).endStream(false).build();
+                        })
+                        .concatWithValues(StreamData.builder()
+                                .state(TaskState.COMPLETED)
+                                .message(Message.builder().role(Role.AGENT).parts(List.of(new TextPart(""))).build())
+                                .endStream(true)
+                                .build());
             }
-        };
-
-        manager.onSendTaskSubscribe(null);
+        });
     }
-
 
 }
