@@ -9,7 +9,7 @@
     </appender>
 
     <!-- Main MCP package -->
-    <logger name="io.github.PheonixHkbxoic" level="INFO"/>
+    <logger name="io.github.pheonixhkbxoic" level="INFO"/>
 
     <!-- Root logger -->
     <root level="INFO">

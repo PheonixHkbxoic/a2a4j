@@ -1,6 +1,9 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
 import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.List;
@@ -18,13 +21,19 @@ public class TaskSendParams {
     /**
      * task id
      */
+    @NotBlank
     private String id;
     // uuid 4 hex
+    @NotBlank
     private String sessionId;
+
+    @Valid
+    @NotNull
     private Message message;
     @Nullable
     private List<String> acceptedOutputModes;
     @Nullable
+    @Valid
     private PushNotificationConfig pushNotification;
     @Nullable
     private Integer historyLength;

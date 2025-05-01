@@ -5,7 +5,7 @@ package io.github.pheonixhkbxoic.a2a4j.webflux.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JsonRpcError;
@@ -57,11 +57,8 @@ public class WebfluxSseTaskTests {
 
     @BeforeEach
     public void before() {
-        EchoAgent echoAgent = new EchoAgent();
         AgentCard agentCard = agentCard();
-        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
-        EchoTaskManager taskManager = new EchoTaskManager(echoAgent, pushNotificationSenderAuth);
-        WebfluxSseServerAdapter webFluxSseServerAdapter = new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
+        WebfluxSseServerAdapter webFluxSseServerAdapter = getWebfluxSseServerAdapter(agentCard);
         HttpHandler httpHandler = RouterFunctions.toHttpHandler(webFluxSseServerAdapter.getRouterFunction());
         ReactorHttpHandlerAdapter adapter = new ReactorHttpHandlerAdapter(httpHandler);
         this.httpServer = HttpServer.create().port(PORT).handle(adapter).bindNow();
@@ -70,6 +67,7 @@ public class WebfluxSseTaskTests {
         try {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, webFluxSseServerAdapter);
+            server.start();
 
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
@@ -80,6 +78,15 @@ public class WebfluxSseTaskTests {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static WebfluxSseServerAdapter getWebfluxSseServerAdapter(AgentCard agentCard) {
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
+        EchoAgent echoAgent = new EchoAgent();
+        AgentInvoker agentInvoker = new EchoAgentInvoker(echoAgent);
+        TaskManager taskManager = new InMemoryTaskManager(taskStore, pushNotificationSenderAuth, agentInvoker);
+        return new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
     }
 
     @AfterEach
@@ -104,7 +111,8 @@ public class WebfluxSseTaskTests {
         TaskQueryParams params = new TaskQueryParams();
         params.setId("1");
         params.setHistoryLength(3);
-        GetTaskResponse taskResponse = client.getTask(params);
+        GetTaskResponse taskResponse = client.getTask(params).block();
+        assert taskResponse != null;
         JsonRpcError error = taskResponse.getError();
         assertThat(error).isNotNull().extracting("code").isEqualTo(new TaskNotFoundError().getCode());
     }
@@ -117,7 +125,7 @@ public class WebfluxSseTaskTests {
                 .historyLength(3)
                 .message((Message.builder().role(Role.USER)).parts(Collections.singletonList(new TextPart("100块人民币能总汇多少美元"))).build())
                 .build();
-        SendTaskResponse taskResponse = client.sendTask(params);
+        SendTaskResponse taskResponse = client.sendTask(params).block();
         assertThat(taskResponse).isNotNull();
         assertThat(taskResponse.getError()).isNull();
         log.info("taskResponse: {}", Util.toJson(taskResponse));
@@ -125,7 +133,7 @@ public class WebfluxSseTaskTests {
         TaskQueryParams q = new TaskQueryParams();
         q.setId(params.getId());
         q.setHistoryLength(3);
-        GetTaskResponse getTaskResponse = client.getTask(q);
+        GetTaskResponse getTaskResponse = client.getTask(q).block();
         assertThat(getTaskResponse).isNotNull();
         log.info("getTaskResponse: {}", Util.toJson(getTaskResponse));
     }

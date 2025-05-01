@@ -1,5 +1,6 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Method;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskIdParams;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,7 +14,7 @@ import lombok.ToString;
 @Data
 public class GetTaskPushNotificationRequest extends JsonRpcRequest<TaskIdParams> {
     public GetTaskPushNotificationRequest() {
-        this.setMethod("tasks/pushNotification/get");
+        this.setMethod(Method.TASKS_PUSHNOTIFICATION_GET);
     }
 
     public GetTaskPushNotificationRequest(TaskIdParams params) {

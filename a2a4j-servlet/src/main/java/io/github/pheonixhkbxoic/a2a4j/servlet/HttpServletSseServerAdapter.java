@@ -7,12 +7,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
 import io.github.pheonixhkbxoic.a2a4j.core.core.ServerAdapter;
 import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Method;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InternalError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.InvalidRequestError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JSONParseError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.MethodNotFoundError;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
+import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -22,7 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpStatus;
+import org.apache.hc.core5.http.HttpStatus;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -49,7 +52,8 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     private final Validator validator;
     private final PushNotificationSenderAuth auth;
 
-    private volatile boolean isClosing = false;
+    private volatile boolean isClosing = true;
+    private final A2AServer server;
 
     public HttpServletSseServerAdapter(AgentCard agentCard, TaskManager taskManager, Validator validator, PushNotificationSenderAuth auth) {
         this(new ObjectMapper(), null, null, agentCard, taskManager, validator, null, auth);
@@ -72,6 +76,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         this.taskManager = taskManager;
         this.validator = validator;
         this.auth = auth;
+        this.server = new A2AServer(this.agentCard, this);
     }
 
     public static final String UTF_8 = "UTF-8";
@@ -141,8 +146,7 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
             }
 
             // streaming request
-            if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(req.getMethod())
-                    || new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(req.getMethod())) {
+            if (Method.isSse(req.getMethod())) {
                 this.handleRequestSse(request, response, req);
                 return;
             }
@@ -152,11 +156,17 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
         } catch (JacksonException e) {
             log.error("json parse error: {}", e.getMessage(), e);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, om.writeValueAsString(new JSONParseError()));
+            response.setContentType(APPLICATION_JSON);
+            response.setCharacterEncoding(UTF_8);
         } catch (IllegalArgumentException | IllegalStateException | ValidationException e) {
             log.error("invalid request error: {}", e.getMessage(), e);
+            response.setContentType(APPLICATION_JSON);
+            response.setCharacterEncoding(UTF_8);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, om.writeValueAsString(new InvalidRequestError()));
         } catch (Exception e) {
             log.error("handle request error: {}", e.getMessage(), e);
+            response.setContentType(APPLICATION_JSON);
+            response.setCharacterEncoding(UTF_8);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, om.writeValueAsString(new InternalError()));
         }
     }
@@ -164,75 +174,96 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     public <T> void handleRequestSse(HttpServletRequest request, HttpServletResponse response, JsonRpcRequest<T> rpcRequest) throws IOException {
         Mono<? extends JsonRpcResponse<?>> monoResponse;
         String taskId;
-        if (new SendTaskStreamingRequest().getMethod().equalsIgnoreCase(rpcRequest.getMethod())) {
-            SendTaskStreamingRequest req = om.convertValue(rpcRequest, new TypeReference<SendTaskStreamingRequest>() {
+        if (Method.TASKS_SENDSUBSCRIBE.equalsIgnoreCase(rpcRequest.getMethod())) {
+            SendTaskStreamingRequest req = om.convertValue(rpcRequest, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onSendTaskSubscribe(req);
             taskId = req.getParams().getId();
-        } else if (new TaskResubscriptionRequest().getMethod().equalsIgnoreCase(rpcRequest.getMethod())) {
-            TaskResubscriptionRequest req = om.convertValue(rpcRequest, new TypeReference<TaskResubscriptionRequest>() {
+        } else if (Method.TASKS_RESUBSCRIBE.equalsIgnoreCase(rpcRequest.getMethod())) {
+            TaskResubscriptionRequest req = om.convertValue(rpcRequest, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             monoResponse = taskManager.onResubscribeTask(req);
             taskId = req.getParams().getId();
         } else {
-            monoResponse = Mono.just(new JsonRpcResponse<>(rpcRequest.getId(), new MethodNotFoundError()));
-            taskId = "";
-        }
-
-        // exception return rpcResponse
-        JsonRpcResponse<?> rpcResponse = monoResponse.block();
-        if (rpcResponse != null) {
-            this.sendMessage(response, rpcResponse);
+            response.setContentType(APPLICATION_JSON);
+            response.setCharacterEncoding(UTF_8);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, om.writeValueAsString(new MethodNotFoundError()));
             return;
         }
 
-        // sse response
-        response.setContentType("text/event-stream");
-        response.setCharacterEncoding(UTF_8);
-        response.setHeader("Cache-Control", "no-cache");
-        response.setHeader("Connection", "keep-alive");
-        response.setHeader("Access-Control-Allow-Origin", "*");
-
-        AsyncContext asyncContext = request.startAsync();
-        asyncContext.setTimeout(0);
-
-        PrintWriter writer = response.getWriter();
-
-        // sse handle
-        taskManager.dequeueEvent(taskId)
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnError(e -> writer.close())
-                .doOnComplete(writer::close)
-                .subscribe(updateEvent -> {
-                    log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
+        monoResponse
+                // business error return status ok
+                .flatMap(error -> {
                     try {
-                        String message = om.writeValueAsString(new SendTaskStreamingResponse(rpcRequest.getId(), updateEvent));
-                        this.sendEvent(writer, EVENT_MESSAGE, message);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
+                        this.sendMessage(response, error);
                     } catch (IOException e) {
-                        log.info(e.getMessage());
-                        writer.close();
+                        throw new RuntimeException(e);
                     }
-                });
+                    return Mono.empty();
+                })
+                // sse response
+                .switchIfEmpty(Mono.fromRunnable(() -> {
+                    // sse response
+                    response.setContentType("text/event-stream");
+                    response.setCharacterEncoding(UTF_8);
+                    response.setHeader("Cache-Control", "no-cache");
+                    response.setHeader("Connection", "keep-alive");
+                    response.setHeader("Access-Control-Allow-Origin", "*");
+
+                    AsyncContext asyncContext = request.startAsync();
+                    asyncContext.setTimeout(0);
+
+                    try {
+                        PrintWriter writer = response.getWriter();
+                        // sse handle
+                        taskManager.dequeueEvent(taskId)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .doOnError(e -> writer.close())
+                                .doOnComplete(writer::close)
+                                .subscribe(updateEvent -> {
+                                    log.debug("dequeueEvent taskId: {}, updateEvent: {}", taskId, updateEvent);
+                                    try {
+                                        String message = om.writeValueAsString(new SendTaskStreamingResponse(rpcRequest.getId(), updateEvent));
+                                        this.sendEvent(writer, EVENT_MESSAGE, message);
+                                    } catch (JsonProcessingException e) {
+                                        throw new RuntimeException(e);
+                                    } catch (IOException e) {
+                                        log.info(e.getMessage());
+                                        writer.close();
+                                    }
+                                });
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }))
+                .block();
     }
 
     public <T> void handleRequest(HttpServletResponse httpServletResponse, JsonRpcRequest<T> request) throws IOException {
         Mono<? extends JsonRpcResponse<?>> response;
-        if (new GetTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            GetTaskRequest req = om.convertValue(request, new TypeReference<GetTaskRequest>() {
+        if (Method.TASKS_GET.equalsIgnoreCase(request.getMethod())) {
+            GetTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onGetTask(req);
-        } else if (new SendTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            SendTaskRequest req = om.convertValue(request, new TypeReference<SendTaskRequest>() {
+        } else if (Method.TASKS_SEND.equalsIgnoreCase(request.getMethod())) {
+            SendTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onSendTask(req);
-        } else if (new CancelTaskRequest().getMethod().equalsIgnoreCase(request.getMethod())) {
-            CancelTaskRequest req = om.convertValue(request, new TypeReference<CancelTaskRequest>() {
+        } else if (Method.TASKS_CANCEL.equalsIgnoreCase(request.getMethod())) {
+            CancelTaskRequest req = om.convertValue(request, new TypeReference<>() {
             });
+            Util.validate(validator, req);
             response = taskManager.onCancelTask(req);
         } else {
-            response = Mono.just(new JsonRpcResponse<>(request.getId(), new MethodNotFoundError()));
+            httpServletResponse.setContentType(APPLICATION_JSON);
+            httpServletResponse.setCharacterEncoding(UTF_8);
+            httpServletResponse.sendError(HttpServletResponse.SC_BAD_REQUEST, om.writeValueAsString(new MethodNotFoundError()));
+            return;
         }
 
         this.sendMessage(httpServletResponse, response.block());
@@ -252,6 +283,16 @@ public class HttpServletSseServerAdapter extends HttpServlet implements ServerAd
     public Mono<Void> closeGracefully() {
         isClosing = true;
         return this.taskManager.closeGracefully();
+    }
+
+    @Override
+    public void start() {
+        this.isClosing = false;
+    }
+
+    @Override
+    public A2AServer getServer() {
+        return this.server;
     }
 
     /**

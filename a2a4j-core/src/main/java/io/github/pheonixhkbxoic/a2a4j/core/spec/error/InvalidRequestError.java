@@ -8,4 +8,9 @@ public class InvalidRequestError extends JsonRpcError {
         this.setCode(-32600);
         this.setMessage("Request payload validation error");
     }
+
+    public InvalidRequestError(String message) {
+        this.setCode(-32600);
+        this.setMessage("Request payload validation error: " + message);
+    }
 }

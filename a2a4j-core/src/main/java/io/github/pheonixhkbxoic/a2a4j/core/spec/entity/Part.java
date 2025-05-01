@@ -1,8 +1,9 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
-import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Nullable;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Data
 public class Part implements Serializable {
+    @NotBlank
     protected String type;
     @Nullable
     protected Map<String, Object> metadata;

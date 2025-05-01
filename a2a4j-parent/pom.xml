@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.github.pheonixhkbxoic</groupId>
         <artifactId>a2a4j</artifactId>
-        <version>2.0.0</version>
+        <version>2.0.1</version>
     </parent>
 
     <artifactId>a2a4j-parent</artifactId>
@@ -21,7 +21,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.36</lombok.version>
         <jackson.version>2.18.3</jackson.version>
-        <logback.version>1.2.11</logback.version>
+        <logback.version>1.5.18</logback.version>
         <jupiter.version>5.13.0-M2</jupiter.version>
         <mockito.version>5.17.0</mockito.version>
 
@@ -31,13 +31,15 @@
 
         <tomcat.version>10.1.40</tomcat.version>
         <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
-        <jarkarta.validation.version>3.1.1</jarkarta.validation.version>
-        <validator.version>6.2.5.Final</validator.version>
+        <jakarta.validation.version>3.0.2</jakarta.validation.version>
+        <jakarta.el.version>4.0.2</jakarta.el.version>
+        <validator.version>8.0.2.Final</validator.version>
         <reactor.version>3.7.4</reactor.version>
         <reactor.http.version>1.2.4</reactor.http.version>
+        <netty.version>4.1.119.Final</netty.version>
         <assertj.version>3.26.3</assertj.version>
 
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>5.4.4</httpclient.version>
         <jose.verson>10.2</jose.verson>
     </properties>
 
@@ -135,14 +137,19 @@
             <dependency>
                 <groupId>jakarta.validation</groupId>
                 <artifactId>jakarta.validation-api</artifactId>
-                <version>${jarkarta.validation.version}</version>
+                <version>${jakarta.validation.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${validator.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.glassfish</groupId>
+                <artifactId>jakarta.el</artifactId>
+                <version>${jakarta.el.version}</version>
+                <scope>compile</scope>
+            </dependency>
 
             <!-- spring -->
             <dependency>
@@ -172,12 +179,25 @@
                 <artifactId>spring-webflux</artifactId>
                 <version>${springframework.version}</version>
             </dependency>
-
-
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-webflux</artifactId>
+                <version>${springboot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
             <!-- other -->
             <dependency>
-                <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpclient</artifactId>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
                 <version>${httpclient.version}</version>
             </dependency>
             <dependency>

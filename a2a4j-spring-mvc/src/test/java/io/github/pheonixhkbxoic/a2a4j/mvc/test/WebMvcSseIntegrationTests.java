@@ -4,17 +4,18 @@
 package io.github.pheonixhkbxoic.a2a4j.mvc.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.pheonixhkbxoic.a2a4j.core.core.InMemoryTaskManager;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCapabilities;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentSkill;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Task;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.message.*;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -27,15 +28,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
-import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,8 +53,8 @@ public class WebMvcSseIntegrationTests {
     private WebMvcSseServerAdapter serverTransportProvider;
 
 
+    @EnableWebMvc// autoconfigure HttpMessageConverter
     @Configuration
-    @EnableWebMvc
     static class TestConfig {
 
         @Bean
@@ -76,24 +79,23 @@ public class WebMvcSseIntegrationTests {
         }
 
         @Bean
+        public InMemoryTaskStore inMemoryTaskStore() {
+            return new InMemoryTaskStore();
+        }
+
+        @Bean
+        public EchoAgent echoAgent() {
+            return new EchoAgent();
+        }
+
+        @Bean
+        public AgentInvoker agentInvoker() {
+            return new EchoAgentInvoker(echoAgent());
+        }
+
+        @Bean
         public TaskManager taskManager() {
-            return new InMemoryTaskManager() {
-                @Override
-                public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
-                    log.info("sendTaskRequest: {}", request);
-                    return Mono.just(new SendTaskResponse(Task.builder().build()));
-                }
-
-                @Override
-                public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
-                }
-
-                @Override
-                public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
-                    return Mono.just(new JsonRpcResponse<>(request.getId(), new UnsupportedOperationError()));
-                }
-            };
+            return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker());
         }
 
         @Bean
@@ -101,9 +103,15 @@ public class WebMvcSseIntegrationTests {
             return new PushNotificationSenderAuth();
         }
 
+        @Primary
         @Bean
-        public WebMvcSseServerAdapter webMvcSseServerTransportProvider() {
-            return new WebMvcSseServerAdapter(agentCard(), taskManager(), null, pushNotificationSenderAuth());
+        public LocalValidatorFactoryBean validator() {
+            return new LocalValidatorFactoryBean();
+        }
+
+        @Bean
+        public WebMvcSseServerAdapter webMvcSseServerTransportProvider(Validator validator) {
+            return new WebMvcSseServerAdapter(agentCard(), taskManager(), validator, pushNotificationSenderAuth());
         }
 
         @Bean
@@ -185,11 +193,54 @@ public class WebMvcSseIntegrationTests {
     @Test
     public void testInitialize() {
         A2AServer server = new A2AServer(agentCard, serverTransportProvider);
+        server.start();
         AgentCardResolver resolver = new AgentCardResolver(baseUrl);
         AgentCard serverAgentCard = resolver.resolve();
         assertThat(serverAgentCard).isNotNull();
         log.info("serverAgentCard: {}", serverAgentCard);
         server.close();
     }
+
+
+    @Data
+    static class User {
+        @NotBlank
+        private String id;
+
+        @Valid
+        @NotNull
+        private User2 user2;
+
+        public User(String id, User2 user2) {
+            this.id = id;
+            this.user2 = user2;
+        }
+
+    }
+
+    static class User2 {
+        @NotBlank
+        private String id;
+
+
+        public User2(String id) {
+            this.id = id;
+        }
+    }
+
+    @Test
+    public void testValidator() {
+        Validator validator = appContext.getBean(Validator.class);
+        Set<ConstraintViolation<User>> s1 = validator.validate(new User(null, null));
+        assertThat(s1).isNotEmpty();
+        Set<ConstraintViolation<User>> s2 = validator.validate(new User("1", null));
+        assertThat(s2).isNotEmpty();
+        Set<ConstraintViolation<User>> s3 = validator.validate(new User("1", new User2(null)));
+        assertThat(s3).isNotEmpty();
+        Set<ConstraintViolation<User>> s4 = validator.validate(new User("1", new User2("11")));
+        assertThat(s4).isEmpty();
+
+    }
+
 
 }

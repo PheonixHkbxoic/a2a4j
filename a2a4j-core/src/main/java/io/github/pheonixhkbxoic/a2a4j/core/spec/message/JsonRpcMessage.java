@@ -1,6 +1,7 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
 import io.github.pheonixhkbxoic.a2a4j.core.util.Uuid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.ToString;
 
@@ -14,6 +15,7 @@ public class JsonRpcMessage {
     /**
      * message id
      */
+    @NotBlank
     protected String id;
 
     public JsonRpcMessage() {

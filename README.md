@@ -1,3 +1,5 @@
+[TOC]
+
 # a2a4j
 
 agent to agent scenarios with google a2a protocol
@@ -70,7 +72,7 @@ Features:
 - [x] more a2a4j example project, please refer
   to [a2a4j-examples jdk8](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/jdk8)
   and [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main)
-- [x] support more LLM, eg.LangChain
+- [x] support more LLM, eg.LangChain4j
 
 ## a2a4j-examples
 
@@ -85,287 +87,317 @@ to [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/m
 
 下面的示例开发环境：JDK17+, SpringBoot 3.4.5
 
-### server配置
+### agent/server配置
 
 1. 引入maven依赖
 
-```xml
-
-<dependencies>
-
-    <dependency>
-        <groupId>io.github.pheonixhkbxoic</groupId>
-        <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
-        <version>2.0.0</version>
-    </dependency>
-    <!-- 或 use webflux -->
-    <!--    <dependency>-->
-    <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
-    <!--        <artifactId>a2a4j-agent-webflux-spring-boot-starter</artifactId>-->
-    <!--        <version>2.0.0</version>-->
-    <!--    </dependency>-->
-</dependencies>
-```
+    ```xml
+    
+    <dependencies>
+        <dependency>
+            <groupId>io.github.pheonixhkbxoic</groupId>
+            <artifactId>a2a4j-agent-mvc-spring-boot-starter</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <!-- 或 use webflux -->
+        <!--    <dependency>-->
+        <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
+        <!--        <artifactId>a2a4j-agent-webflux-spring-boot-starter</artifactId>-->
+        <!--        <version>2.0.1</version>-->
+        <!--    </dependency>-->
+    </dependencies>
+    ```
 
 2. 配置AgentCard实例
 
-```java
-
-@Bean
-public AgentCard agentCard() {
-    AgentCapabilities capabilities = new AgentCapabilities();
-    AgentSkill skill = AgentSkill.builder().id("convert_currency").name("Currency Exchange Rates Tool").description("Helps with exchange values between various currencies").tags(Arrays.asList("currency conversion", "currency exchange")).examples(Collections.singletonList("What is exchange rate between USD and GBP?")).inputModes(Collections.singletonList("text")).outputModes(Collections.singletonList("text")).build();
-    AgentCard agentCard = new AgentCard();
-    agentCard.setName("Currency Agent");
-    agentCard.setDescription("current exchange");
-    agentCard.setUrl("http://127.0.0.1:" + port);
-    agentCard.setVersion("1.0.1");
-    agentCard.setCapabilities(capabilities);
-    agentCard.setSkills(Collections.singletonList(skill));
-    return agentCard;
-}
-```
-
-AgentCard用来描述当前Agent Server所具有的能力，客户端启动时会连接到`http://{your_server_domain}/.well-known/agent.json`
-来获取AgentCard
-
-3. 实现自定义任务管理器
-
-```java
-
-@Component
-public class EchoTaskManager extends InMemoryTaskManager {
-    // wire agent
-    private final EchoAgent agent;
-    // agent support modes
-    private final List<String> supportModes = Arrays.asList("text", "file", "data");
-
-    public EchoTaskManager(@Autowired EchoAgent agent, @Autowired PushNotificationSenderAuth pushNotificationSenderAuth) {
-        this.agent = agent;
-        // must autowired, keep PushNotificationSenderAuth instance unique global
-        this.pushNotificationSenderAuth = pushNotificationSenderAuth;
+    ```java
+    
+    @Bean
+    public AgentCard agentCard() {
+        AgentCapabilities capabilities = new AgentCapabilities();
+        AgentSkill skill = AgentSkill.builder()
+                .id("echoAgent")
+                .name("echo agent")
+                .description("just echo user message")
+                .tags(List.of("echo"))
+                .examples(Collections.singletonList("I'm big strong!"))
+                .inputModes(Collections.singletonList("text"))
+                .outputModes(Collections.singletonList("text"))
+                .build();
+        AgentCard agentCard = new AgentCard();
+        agentCard.setName("echoAgent");
+        agentCard.setDescription("echo agent, Answer the user's questions exactly as they are");
+        agentCard.setUrl("http://127.0.0.1:" + port);
+        agentCard.setVersion("2.0.1");
+        agentCard.setCapabilities(capabilities);
+        agentCard.setSkills(Collections.singletonList(skill));
+        return agentCard;
     }
+    ```
 
-    @Override
-    public Mono<SendTaskResponse> onSendTask(SendTaskRequest request) {
-        log.info("onSendTask request: {}", request);
-        TaskSendParams ps = request.getParams();
-        // 1. check
-        JsonRpcResponse<Object> error = this.validRequest(request);
-        if (error != null) {
-            return Mono.just(new SendTaskResponse(request.getId(), error.getError()));
+   AgentCard用来描述当前Agent Server所具有的能力，客户端启动时会连接到
+   `http://{your_server_domain}/.well-known/agent.json`
+   来获取AgentCard
+
+
+3. 实现自定义AgentInvoker
+
+    ```java
+    
+    @Component
+    public class EchoAgentInvoker implements AgentInvoker {
+        @Resource
+        private EchoAgent agent;
+    
+        @Override
+        public Mono<List<Artifact>> invoke(SendTaskRequest request) {
+            String userQuery = this.extractUserQuery(request.getParams());
+            return agent.chat(userQuery)
+                    .map(text -> {
+                        Artifact artifact = Artifact.builder().name("answer").parts(List.of(new TextPart(text))).build();
+                        return List.of(artifact);
+                    });
         }
-        // check pushNotification
-
-        // save
-        this.upsertTask(ps);
-        this.updateStore(ps.getId(), new TaskStatus(TaskState.WORKING), null);
-
-        // send task notification
-
-        // 2. agent invoke
-        log.info("sessionId: {}", ps.getSessionId());
-        return this.agentInvoke(ps).map(artifacts -> {
-            Task task = this.updateStore(ps.getId(), new TaskStatus(TaskState.COMPLETED), artifacts);
-
-            // handle agent response
-            this.appendTaskHistory(task, 3);
-
-            return new SendTaskResponse(task);
-        });
-    }
-
-    @Override
-    public Mono<? extends JsonRpcResponse<?>> onSendTaskSubscribe(SendTaskStreamingRequest request) {
-        return Mono.fromCallable(() -> {
-            log.info("onSendTaskSubscribe request: {}", request);
-            TaskSendParams ps = request.getParams();
-            String taskId = ps.getId();
-
-            return null;
-        });
-    }
-
-    @Override
-    public Mono<? extends JsonRpcResponse<?>> onResubscribeTask(TaskResubscriptionRequest request) {
-        TaskIdParams params = request.getParams();
-        try {
-            this.initEventQueue(params.getId(), true);
-        } catch (Exception e) {
-            log.error("Error while reconnecting to SSE stream: {}", e.getMessage());
-            return Mono.just(new JsonRpcResponse<>(request.getId(), new InternalError("An error occurred while reconnecting to stream: " + e.getMessage())));
+    
+        @Override
+        public Flux<StreamData> invokeStream(SendTaskStreamingRequest request) {
+            String userQuery = this.extractUserQuery(request.getParams());
+            return agent.chatStream(userQuery)
+                    .map(text -> {
+                        Message message = Message.builder().role(Role.AGENT).parts(List.of(new TextPart(text))).build();
+                        return StreamData.builder().state(TaskState.WORKING).message(message).endStream(false).build();
+                    })
+                    .concatWithValues(StreamData.builder()
+                            .state(TaskState.COMPLETED)
+                            .message(Message.builder().role(Role.AGENT).parts(List.of(new TextPart(""))).build())
+                            .endStream(true)
+                            .build());
         }
-        return Mono.empty();
     }
+    
+    ```
 
-    // simulate agent invoke
-    private Mono<List<Artifact>> agentInvoke(TaskSendParams ps) {
+   注意事项：
 
-    }
+    * 需要实现`AgentInvoker`接口，处理agent的调用与转换
 
-    private JsonRpcResponse<Object> validRequest(JsonRpcRequest<TaskSendParams> request) {
 
-    }
-}
-
-```
-
-注意事项：
-
-* 需要继承`InMemoryTaskManager`类，并实现必要的方法，如：`onSendTask`,`onSendTaskSubscribe`
-* 需要注入`PushNotificationSenderAuth`实例，如果想发送任务状态通知到通知监听服务器，此实例会通过
-  ``http://{your_server_domain}/.well-known/jwks.json``来开放公钥，通知监听器通过`PushNotificationReceiverAuth`
-  来验证通知请求token、数据是否有效
-* 自定义类Agent来与底层LLM交互
-
-4. 代码参考
+4. 代码参考  
    [a2a4j-examples agents/echo-agent](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main/agents/echo-agent)
 
-### client/host配置
+### host/client配置
 
 1. 引入maven依赖
 
-```xml
-
-<dependency>
-    <groupId>io.github.pheonixhkbxoic</groupId>
-    <artifactId>a2a4j-host-spring-boot-starter</artifactId>
-    <version>2.0.0</version>
-</dependency>
-```
+    ```xml
+    
+    <dependency>
+        <groupId>io.github.pheonixhkbxoic</groupId>
+        <artifactId>a2a4j-host-spring-boot-starter</artifactId>
+        <version>2.0.1</version>
+    </dependency>
+    ```
 
 2. 在配置文件(如application.xml)中配置相关属性
 
-```yaml
-a2a4j:
-  host:
-    # can be null
-    notification:
-      url: http://127.0.0.1:8989/notify
+    ```yaml
+    a2a4j:
+      host:
+        # can be null
+        notification:
+          url: http://127.0.0.1:8989/notify
+    
+        agents:
+          agent-001:
+            baseUrl: http://127.0.0.1:8901
+    
+    ```
 
-    agents:
-      agent-001:
-        baseUrl: http://127.0.0.1:8901
+    * 必须配置Agent Server的baseUrl，可配置多个
+    * 选择性的配置Notification Server的baseUrl
 
-```
-
-* 必须配置Agent Server的baseUrl，可配置多个
-* 选择性的配置Notification Server的baseUrl
 
 3. 发送任务请求并处理响应
 
-```java
-
-@Slf4j
-@RestController
-public class AgentController {
-    @Resource
-    private List<A2AClient> clients;
-
-    @GetMapping("/chat")
-    public ResponseEntity<Object> chat(String userId, String sessionId, String prompts) {
-        A2AClient client = clients.get(0);
-        TaskSendParams params = TaskSendParams.builder()
-                .id(Uuid.uuid4hex())
-                .sessionId(sessionId)
-                .historyLength(3)
-                .acceptedOutputModes(Collections.singletonList("text"))
-                .message(new Message(Role.USER, Collections.singletonList(new TextPart(prompts)), null))
-                .pushNotification(client.getPushNotificationConfig())
-                .build();
-        log.info("params: {}", Util.toJson(params));
-        SendTaskResponse sendTaskResponse = client.sendTask(params);
-
-        JsonRpcError error = sendTaskResponse.getError();
-        if (error != null) {
-            return ResponseEntity.badRequest().body(error);
+    ```java
+    
+    @Slf4j
+    @RestController
+    public class AgentController {
+        @Resource
+        private A2AClientSet clientSet;
+    
+        @GetMapping("/chat")
+        public ResponseEntity<Object> chat(String userId, String sessionId, String prompts) {
+            A2AClient client = clientSet.getByConfigKey("echoAgent");
+            TaskSendParams params = TaskSendParams.builder()
+                    .id(Uuid.uuid4hex())
+                    .sessionId(sessionId)
+                    .historyLength(3)
+                    .acceptedOutputModes(Collections.singletonList("text"))
+                    .message(new Message(Role.USER, Collections.singletonList(new TextPart(prompts)), null))
+                    .pushNotification(client.getPushNotificationConfig())
+                    .build();
+            log.info("chat params: {}", Util.toJson(params));
+            try {
+                String answer = client.sendTask(params)
+                        .flatMap(sendTaskResponse -> {
+                            if (sendTaskResponse.getError() != null) {
+                                return Mono.error(new ValueError(Util.toJson(sendTaskResponse.getError())));
+                            }
+                            Task task = sendTaskResponse.getResult();
+                            return Mono.just(task.getArtifacts().stream()
+                                    .flatMap(t -> t.getParts().stream())
+                                    .filter(p -> new TextPart().getType().equals(p.getType()))
+                                    .map(p -> ((TextPart) p).getText())
+                                    .filter(t -> !Util.isEmpty(t))
+                                    .collect(Collectors.joining("\n")));
+                        })
+                        .block();
+                return ResponseEntity.ok(answer);
+            } catch (A2AClientHTTPError e) {
+                log.error("chat exception: {}", e.getMessage(), e);
+                return ResponseEntity.status(e.getStatusCode()).body(e.getMessage());
+            } catch (Exception e) {
+                log.error("chat exception: {}", e.getMessage(), e);
+                return ResponseEntity.internalServerError().body(e.getMessage());
+            }
         }
-        Task task = sendTaskResponse.getResult();
-        String answer = task.getArtifacts().stream()
-                .flatMap(t -> t.getParts().stream())
-                .filter(p -> new TextPart().getType().equals(p.getType()))
-                .map(p -> ((TextPart) p).getText())
-                .collect(Collectors.joining("\n"));
-        return ResponseEntity.ok(answer);
     }
+    
+    ```
 
-}
-
-```
-
-4. 代码参考
+4. 代码参考  
    [a2a4j-examples hosts/standalone](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main/hosts/standalone)
 
 ### notification server配置
 
 1. 引入maven依赖
 
-```xml
-
-<dependencies>
-
-    <dependency>
-        <groupId>io.github.pheonixhkbxoic</groupId>
-        <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
-        <version>2.0.0</version>
-    </dependency>
-    <!-- 或 use webflux -->
-    <!--    <dependency>-->
-    <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
-    <!--        <artifactId>a2a4j-notification-webflux-spring-boot-starter</artifactId>-->
-    <!--        <version>2.0.0</version>-->
-    <!--    </dependency>-->
-</dependencies>
-```
+    ```xml
+    
+    <dependencies>
+    
+        <dependency>
+            <groupId>io.github.pheonixhkbxoic</groupId>
+            <artifactId>a2a4j-notification-mvc-spring-boot-starter</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <!-- 或 use webflux -->
+        <!--    <dependency>-->
+        <!--        <groupId>io.github.pheonixhkbxoic</groupId>-->
+        <!--        <artifactId>a2a4j-notification-webflux-spring-boot-starter</artifactId>-->
+        <!--        <version>2.0.1</version>-->
+        <!--    </dependency>-->
+    </dependencies>
+    ```
 
 2. 在配置文件(如application.xml)中配置相关属性
 
-```yaml
-a2a4j:
-  notification:
-    # default 
-    endpoint: "/notify"
-    jwksUrls:
-      - http://127.0.0.1:8901/.well-known/jwks.json
+    ```yaml
+    a2a4j:
+      notification:
+        # default 
+        endpoint: "/notify"
+        jwksUrls:
+          - http://127.0.0.1:8901/.well-known/jwks.json
+    
+    ```
 
-```
+    * 必须配置jwksUrls，可配置多个
+    * 选择性的配置endpoint, 不配置时默认监听`/notify`, AgentServer中的配置`a2a4j.host.notification:`
 
-* 必须配置jwksUrls，可配置多个
-* 选择性的配置endpoint, 不配置时默认监听`/notify`
 
 3. 自定义监听器并实例化
 
-```java
-
-@Component
-public class NotificationListener extends WebMvcNotificationAdapter {
-    protected final ScheduledThreadPoolExecutor scheduler;
-
-    public NotificationListener(@Autowired A2a4jNotificationProperties a2a4jNotificationProperties) {
-        super(a2a4jNotificationProperties.getEndpoint(), a2a4jNotificationProperties.getJwksUrls());
-
-        // auto reloadJwks when Agent restart
-        scheduler = new ScheduledThreadPoolExecutor(1);
-        scheduler.scheduleAtFixedRate(() -> {
-            if (verifyFailCount.get() != 0) {
-                this.reloadJwks();
-            }
-        }, 1, 1, TimeUnit.MINUTES);
+    ```java
+    
+    @Component
+    public class NotificationListener extends WebMvcNotificationAdapter {
+        protected final ScheduledThreadPoolExecutor scheduler;
+    
+        public NotificationListener(@Autowired A2a4jNotificationProperties a2a4jNotificationProperties) {
+            super(a2a4jNotificationProperties.getEndpoint(), a2a4jNotificationProperties.getJwksUrls());
+    
+            // auto reloadJwks when Agent restart
+            scheduler = new ScheduledThreadPoolExecutor(1);
+            scheduler.scheduleAtFixedRate(() -> {
+                if (verifyFailCount.get() != 0) {
+                    this.reloadJwks();
+                }
+            }, 1, 1, TimeUnit.MINUTES);
+        }
+        // TODO 实现方法来处理通知，可以使用默认实现
     }
-    // TODO 实现方法来处理通知，可以使用默认实现
-}
+    
+    ```
 
-```
+   注意：
 
-注意：
+    * 需要继承`WebMvcNotificationAdapter`类
+    * 注入配置属性`@Autowired A2a4jNotificationProperties a2a4jNotificationProperties`
+      并通过`super(a2a4jNotificationProperties.getEndpoint(), a2a4jNotificationProperties.getJwksUrls());`实例化
+      `PushNotificationReceiverAuth`和监听指定的地址
 
-* 需要继承`WebMvcNotificationAdapter`类
-* 注入配置属性`@Autowired A2a4jNotificationProperties a2a4jNotificationProperties`
-  并通过`super(a2a4jNotificationProperties.getEndpoint(), a2a4jNotificationProperties.getJwksUrls());`实例化
-  `PushNotificationReceiverAuth`和监听指定的地址
 
-4. 代码参考
+4. 代码参考  
    [a2a4j-examples notification-listener](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main/notification-listener)
+
+## manual
+
+> If you just want to use a2a client manually.
+
+1. 引入maven依赖
+
+    ```xml
+    
+    <dependency>
+        <groupId>io.github.pheonixhkbxoic</groupId>
+        <artifactId>a2a4j-core</artifactId>
+        <version>2.0.1</version>
+    </dependency>
+    ```
+
+2. 使用A2AClient连接到Agent Server  
+   The agent server must has start
+
+    ```java
+    String agentCardBaseUrl = "http://127.0.0.1:8901";
+    AgentCard agentCard = new AgentCardResolver(agentCardBaseUrl).resolve();
+    A2AClient client = new A2AClient(agentCard);
+    
+    private static void chat(A2AClient client, String prompts) {
+        TaskSendParams params = TaskSendParams.builder()
+                .id(Uuid.uuid4hex())
+                .sessionId(Uuid.uuid4hex())
+                .historyLength(3)
+                .acceptedOutputModes(Collections.singletonList("text"))
+                .message(new Message(Role.USER, Collections.singletonList(new TextPart(prompts)), null))
+                .pushNotification(client.getPushNotificationConfig())
+                .build();
+        try {
+            client.sendTask(params)
+                    .flatMap(sendTaskResponse -> {
+                        if (sendTaskResponse.getError() != null) {
+                            return Mono.error(new ValueError(Util.toJson(sendTaskResponse.getError())));
+                        }
+                        Task task = sendTaskResponse.getResult();
+                        return Mono.just(task.getArtifacts().stream()
+                                .flatMap(t -> t.getParts().stream())
+                                .filter(p -> new TextPart().getType().equals(p.getType()))
+                                .map(p -> ((TextPart) p).getText())
+                                .filter(t -> !Util.isEmpty(t))
+                                .collect(Collectors.joining("\n")));
+                    })
+                    .subscribe(System.out::println);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    ```
+
+3. 代码参考  
+   [a2a4j-examples hosts cli](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main/hosts/cli)
 
 ## Star History
 

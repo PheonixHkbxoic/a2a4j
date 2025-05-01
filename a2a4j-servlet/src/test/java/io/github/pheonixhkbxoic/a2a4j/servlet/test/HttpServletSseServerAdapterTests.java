@@ -2,8 +2,7 @@ package io.github.pheonixhkbxoic.a2a4j.servlet.test;
 
 import io.github.pheonixhkbxoic.a2a4j.core.client.A2AClient;
 import io.github.pheonixhkbxoic.a2a4j.core.client.AgentCardResolver;
-import io.github.pheonixhkbxoic.a2a4j.core.core.PushNotificationSenderAuth;
-import io.github.pheonixhkbxoic.a2a4j.core.core.TaskManager;
+import io.github.pheonixhkbxoic.a2a4j.core.core.*;
 import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.error.JsonRpcError;
@@ -61,13 +60,23 @@ public class HttpServletSseServerAdapterTests {
         }
 
         @Bean
+        public InMemoryTaskStore inMemoryTaskStore() {
+            return new InMemoryTaskStore();
+        }
+
+        @Bean
         public EchoAgent echoAgent() {
             return new EchoAgent();
         }
 
         @Bean
+        public AgentInvoker agentInvoker() {
+            return new EchoAgentInvoker(echoAgent());
+        }
+
+        @Bean
         public TaskManager taskManager() {
-            return new EchoTaskManager(echoAgent(), pushNotificationSenderAuth());
+            return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker());
         }
 
         @Bean
@@ -136,6 +145,7 @@ public class HttpServletSseServerAdapterTests {
         try {
             log.info("正在启动A2A server and client: {}", baseUrl);
             server = new A2AServer(agentCard, httpServletSseServerAdapter);
+            server.start();
 
             AgentCardResolver resolver = new AgentCardResolver(baseUrl);
             AgentCard serverAgentCard = resolver.resolve();
@@ -180,7 +190,8 @@ public class HttpServletSseServerAdapterTests {
         TaskQueryParams params = new TaskQueryParams();
         params.setId("1");
         params.setHistoryLength(3);
-        GetTaskResponse taskResponse = client.getTask(params);
+        GetTaskResponse taskResponse = client.getTask(params).block();
+        assert taskResponse != null;
         JsonRpcError error = taskResponse.getError();
         assertThat(error).isNotNull().extracting("code").isEqualTo(new TaskNotFoundError().getCode());
     }
@@ -193,7 +204,7 @@ public class HttpServletSseServerAdapterTests {
                 .historyLength(3)
                 .message((Message.builder().role(Role.USER)).parts(Collections.singletonList(new TextPart("100块人民币能总汇多少美元"))).build())
                 .build();
-        SendTaskResponse taskResponse = client.sendTask(params);
+        SendTaskResponse taskResponse = client.sendTask(params).block();
         assertThat(taskResponse).isNotNull();
         assertThat(taskResponse.getError()).isNull();
         log.info("taskResponse: {}", Util.toJson(taskResponse));
@@ -201,7 +212,7 @@ public class HttpServletSseServerAdapterTests {
         TaskQueryParams q = new TaskQueryParams();
         q.setId(params.getId());
         q.setHistoryLength(3);
-        GetTaskResponse getTaskResponse = client.getTask(q);
+        GetTaskResponse getTaskResponse = client.getTask(q).block();
         assertThat(getTaskResponse).isNotNull();
         log.info("getTaskResponse: {}", Util.toJson(getTaskResponse));
     }

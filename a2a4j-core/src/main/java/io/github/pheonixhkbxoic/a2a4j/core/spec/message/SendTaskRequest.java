@@ -1,5 +1,6 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.message;
 
+import io.github.pheonixhkbxoic.a2a4j.core.spec.Method;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskSendParams;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,7 +14,7 @@ import lombok.ToString;
 @Data
 public class SendTaskRequest extends JsonRpcRequest<TaskSendParams> {
     public SendTaskRequest() {
-        this.setMethod("tasks/send");
+        this.setMethod(Method.TASKS_SEND);
     }
 
     public SendTaskRequest(TaskSendParams params) {

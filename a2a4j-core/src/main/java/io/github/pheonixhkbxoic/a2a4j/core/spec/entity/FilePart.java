@@ -1,5 +1,7 @@
 package io.github.pheonixhkbxoic.a2a4j.core.spec.entity;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -14,6 +16,8 @@ import java.util.Map;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class FilePart extends Part implements Serializable {
+    @Valid
+    @NotNull
     private FileContent file;
 
     public FilePart() {

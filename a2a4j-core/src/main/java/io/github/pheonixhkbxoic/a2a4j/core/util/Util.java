@@ -1,15 +1,21 @@
 package io.github.pheonixhkbxoic.a2a4j.core.util;
 
-import io.github.pheonixhkbxoic.a2a4j.core.spec.error.ContentTypeNotSupportedError;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.message.JsonRpcResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.ContentTypeNotSupportedError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.error.UnsupportedOperationError;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.JsonRpcRequest;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.message.JsonRpcResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ValidationException;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author PheonixHkbxoic
@@ -122,10 +128,23 @@ public class Util {
         }
     }
 
-    private static String json = "{\"jsonrpc\":\"2.0\",\"id\":\"4cfc6c25a616401ba5095e72475181c2\",\"method\":\"tasks/sendSubscribe\",\"params\":{\"id\":\"e6d4a0a98055472bb3b6184bfc16fdfb\",\"sessionId\":\"15bd8990773f45d58a88a3c1b5865043\",\"message\":{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"type\":\"text\",\"metadata\":null,\"text\":\"100块人民币能总汇多少美元\"}],\"metadata\":null},\"acceptedOutputModes\":null,\"pushNotification\":null,\"historyLength\":3,\"metadata\":null}}\n";
-
-    public static void main(String[] args) {
-        JsonRpcResponse jsonRpcResponse = Util.fromJson(json, JsonRpcResponse.class);
-        System.out.println("jsonRpcResponse = " + jsonRpcResponse);
+    /**
+     * valid request
+     *
+     * @param validator validator
+     * @param req       request entity
+     * @param <T>       data entity in request entity
+     */
+    public static <T> void validate(Validator validator, JsonRpcRequest<T> req) {
+        if (validator != null) {
+            Set<ConstraintViolation<JsonRpcRequest<T>>> violationSet = validator.validate(req);
+            if (!violationSet.isEmpty()) {
+                String validMessage = violationSet.stream()
+                        .map(cv -> String.format("%s %s(%s)", cv.getPropertyPath().toString(), cv.getMessage(), cv.getInvalidValue()))
+                        .collect(Collectors.joining(","));
+                throw new ValidationException(validMessage);
+            }
+        }
     }
+
 }
