@@ -208,7 +208,7 @@ to [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/m
           url: http://127.0.0.1:8989/notify
     
         agents:
-          agent-001:
+          echoAgent:
             baseUrl: http://127.0.0.1:8901
     
     ```
@@ -325,7 +325,7 @@ to [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/m
                 if (verifyFailCount.get() != 0) {
                     this.reloadJwks();
                 }
-            }, 1, 1, TimeUnit.MINUTES);
+            }, 5, 5, TimeUnit.SECONDS);
         }
         // TODO 实现方法来处理通知，可以使用默认实现
     }
