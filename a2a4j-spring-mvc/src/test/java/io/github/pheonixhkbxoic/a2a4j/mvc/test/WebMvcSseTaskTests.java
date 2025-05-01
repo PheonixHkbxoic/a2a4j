@@ -28,9 +28,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
@@ -49,6 +51,7 @@ public class WebMvcSseTaskTests {
     private static WebMvcSseServerAdapter serverTransportProvider;
 
 
+    @EnableWebMvc
     @Configuration
     static class TestConfig {
 
@@ -91,6 +94,7 @@ public class WebMvcSseTaskTests {
             return new PushNotificationSenderAuth();
         }
 
+        @Primary
         @Bean
         public LocalValidatorFactoryBean validator() {
             return new LocalValidatorFactoryBean();

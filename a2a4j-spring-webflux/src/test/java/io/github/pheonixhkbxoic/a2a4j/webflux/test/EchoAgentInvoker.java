@@ -16,7 +16,7 @@ import java.util.List;
  * @desc
  */
 public class EchoAgentInvoker implements AgentInvoker {
-    private EchoAgent agent;
+    private final EchoAgent agent;
 
     public EchoAgentInvoker(EchoAgent agent) {
         this.agent = agent;

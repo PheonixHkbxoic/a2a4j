@@ -28,9 +28,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
@@ -51,6 +53,7 @@ public class WebMvcSseIntegrationTests {
     private WebMvcSseServerAdapter serverTransportProvider;
 
 
+    @EnableWebMvc// autoconfigure HttpMessageConverter
     @Configuration
     static class TestConfig {
 
@@ -100,6 +103,7 @@ public class WebMvcSseIntegrationTests {
             return new PushNotificationSenderAuth();
         }
 
+        @Primary
         @Bean
         public LocalValidatorFactoryBean validator() {
             return new LocalValidatorFactoryBean();
@@ -199,7 +203,7 @@ public class WebMvcSseIntegrationTests {
 
 
     @Data
-    class User {
+    static class User {
         @NotBlank
         private String id;
 
@@ -214,7 +218,7 @@ public class WebMvcSseIntegrationTests {
 
     }
 
-    class User2 {
+    static class User2 {
         @NotBlank
         private String id;
 

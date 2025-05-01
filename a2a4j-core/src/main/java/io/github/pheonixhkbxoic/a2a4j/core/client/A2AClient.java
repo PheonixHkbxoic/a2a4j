@@ -111,25 +111,23 @@ public class A2AClient {
                 ByteArrayInputStream bais = new ByteArrayInputStream(simpleHttpResponse.getBodyBytes());
                 BufferedReader buf = new BufferedReader(new InputStreamReader(bais));
                 SseEventReader reader = new SseEventReader(buf);
-                return Flux.<SendTaskStreamingResponse>create(sink -> {
-                    reader.onEvent(sseEvent -> {
-                        log.debug("doSendRequestForSse received: {}", sseEvent);
-                        if (!sseEvent.hasData()) {
-                            return;
-                        }
-                        SendTaskStreamingResponse sendTaskStreamingResponse;
-                        try {
-                            sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-                        sink.next(sendTaskStreamingResponse);
-                        UpdateEvent event = sendTaskStreamingResponse.getResult();
-                        if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
-                            sink.complete();
-                        }
-                    }, sink::error);
-                });
+                return Flux.create(sink -> reader.onEvent(sseEvent -> {
+                    log.debug("doSendRequestForSse received: {}", sseEvent);
+                    if (!sseEvent.hasData()) {
+                        return;
+                    }
+                    SendTaskStreamingResponse sendTaskStreamingResponse;
+                    try {
+                        sendTaskStreamingResponse = objectMapper.readValue(sseEvent.getData(), SendTaskStreamingResponse.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    sink.next(sendTaskStreamingResponse);
+                    UpdateEvent event = sendTaskStreamingResponse.getResult();
+                    if (event instanceof TaskStatusUpdateEvent && ((TaskStatusUpdateEvent) event).isFinalFlag()) {
+                        sink.complete();
+                    }
+                }, sink::error));
             }
 
             int statusCode = simpleHttpResponse.getCode();

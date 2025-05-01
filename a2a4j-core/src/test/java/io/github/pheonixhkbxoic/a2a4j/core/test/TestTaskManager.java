@@ -57,34 +57,32 @@ public class TestTaskManager {
 
         SendTaskStreamingRequest requestStream = new SendTaskStreamingRequest(params);
         taskManager.onSendTaskSubscribe(requestStream)
-                .switchIfEmpty(Mono.fromRunnable(() -> {
-                    taskManager.dequeueEvent(params.getId())
-                            .subscribe(updateEvent -> {
-                                if (updateEvent instanceof TaskStatusUpdateEvent statusUpdateEvent) {
-                                    TaskStatus status = statusUpdateEvent.getStatus();
-                                    TaskState state = status.getState();
-                                    LocalDateTime timestamp = status.getTimestamp();
-                                    Message m = status.getMessage();
-                                    String text = Stream.ofNullable(m)
-                                            .filter(Objects::nonNull)
-                                            .flatMap(t -> t.getParts().stream())
-                                            .filter(p -> p instanceof TextPart)
-                                            .map(t -> ((TextPart) t).getText())
-                                            .filter(t -> !Util.isEmpty(t))
-                                            .collect(Collectors.joining("\n"));
-                                    log.info("status event: {}, {}, {}", state, timestamp.format(DateTimeFormatter.ISO_DATE_TIME), text);
-                                } else if (updateEvent instanceof TaskArtifactUpdateEvent artifactUpdateEvent) {
-                                    Artifact artifact = artifactUpdateEvent.getArtifact();
-                                    String text = Stream.ofNullable(artifact)
-                                            .filter(Objects::nonNull)
-                                            .flatMap(t -> t.getParts().stream())
-                                            .filter(p -> p instanceof TextPart)
-                                            .map(t -> ((TextPart) t).getText())
-                                            .collect(Collectors.joining("\n"));
-                                    log.info("artifact event: {}", text);
-                                }
-                            });
-                }))
+                .switchIfEmpty(Mono.fromRunnable(() -> taskManager.dequeueEvent(params.getId())
+                        .subscribe(updateEvent -> {
+                            if (updateEvent instanceof TaskStatusUpdateEvent statusUpdateEvent) {
+                                TaskStatus status = statusUpdateEvent.getStatus();
+                                TaskState state = status.getState();
+                                LocalDateTime timestamp = status.getTimestamp();
+                                Message m = status.getMessage();
+                                String text = Stream.ofNullable(m)
+                                        .filter(Objects::nonNull)
+                                        .flatMap(t -> t.getParts().stream())
+                                        .filter(p -> p instanceof TextPart)
+                                        .map(t -> ((TextPart) t).getText())
+                                        .filter(t -> !Util.isEmpty(t))
+                                        .collect(Collectors.joining("\n"));
+                                log.info("status event: {}, {}, {}", state, timestamp.format(DateTimeFormatter.ISO_DATE_TIME), text);
+                            } else if (updateEvent instanceof TaskArtifactUpdateEvent artifactUpdateEvent) {
+                                Artifact artifact = artifactUpdateEvent.getArtifact();
+                                String text = Stream.ofNullable(artifact)
+                                        .filter(Objects::nonNull)
+                                        .flatMap(t -> t.getParts().stream())
+                                        .filter(p -> p instanceof TextPart)
+                                        .map(t -> ((TextPart) t).getText())
+                                        .collect(Collectors.joining("\n"));
+                                log.info("artifact event: {}", text);
+                            }
+                        })))
                 .block();
     }
 

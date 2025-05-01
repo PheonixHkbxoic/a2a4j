@@ -28,8 +28,7 @@ public class AgentCardResolver {
     private String agentCardPath = "/.well-known/agent.json";
 
     public AgentCardResolver(String baseUrl) {
-        this.name = null;
-        this.baseUrl = baseUrl;
+        this(null, baseUrl, null);
     }
 
     public AgentCardResolver(String name, String baseUrl, String agentCardPath) {

@@ -19,7 +19,7 @@ public class EchoAgent {
 
     Flux<String> chatStream(String prompt) {
         return chat(prompt).flux().flatMap(s -> {
-            Stream<String> stream = Arrays.stream(s.split(" +"));
+            Stream<String> stream = Arrays.stream(s.split("(?=\\b)"));
             return Flux.fromStream(stream);
         });
     }

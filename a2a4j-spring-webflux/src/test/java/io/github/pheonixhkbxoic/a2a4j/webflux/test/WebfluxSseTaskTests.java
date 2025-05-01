@@ -112,6 +112,7 @@ public class WebfluxSseTaskTests {
         params.setId("1");
         params.setHistoryLength(3);
         GetTaskResponse taskResponse = client.getTask(params).block();
+        assert taskResponse != null;
         JsonRpcError error = taskResponse.getError();
         assertThat(error).isNotNull().extracting("code").isEqualTo(new TaskNotFoundError().getCode());
     }
