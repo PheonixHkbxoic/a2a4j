@@ -19,11 +19,17 @@ public class DataPart extends Part implements Serializable {
     private Map<String, Object> data;
 
     public DataPart() {
-        super.setType("data");
+        this.type = Part.DATA;
     }
 
-    public DataPart(String type, Map<String, Object> metadata, Map<String, Object> data) {
-        super(type, metadata);
+    public DataPart(Map<String, Object> data) {
+        this.type = Part.DATA;
         this.data = data;
+    }
+
+    public DataPart(Map<String, Object> data, Map<String, Object> metadata) {
+        this.type = Part.DATA;
+        this.data = data;
+        this.metadata = metadata;
     }
 }

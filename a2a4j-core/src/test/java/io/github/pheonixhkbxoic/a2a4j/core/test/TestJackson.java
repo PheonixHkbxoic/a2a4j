@@ -1,15 +1,17 @@
 package io.github.pheonixhkbxoic.a2a4j.core.test;
 
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.Part;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskState;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TaskStatus;
-import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.TextPart;
+import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.*;
 import io.github.pheonixhkbxoic.a2a4j.core.util.Util;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author PheonixHkbxoic
  */
+@Slf4j
 public class TestJackson {
 
     @Test
@@ -32,4 +34,18 @@ public class TestJackson {
         System.out.println("copy = " + copy);
     }
 
+    @Test
+    public void testPart() {
+        FileContent content = new FileContent();
+        content.setName("xyz.pdf");
+        Message message = Message.builder()
+                .role(Role.USER)
+                .parts(List.of(new TextPart("abc"), new DataPart(Map.of("kk", 1)), new FilePart(content)))
+                .build();
+        TaskSendParams taskSendParams = TaskSendParams.builder().message(message).build();
+        String json = Util.toJson(taskSendParams);
+        log.info("json: {}", json);
+        TaskSendParams deepCopy = Util.fromJson(json, TaskSendParams.class);
+        log.info("deepCopy: {}", deepCopy);
+    }
 }
