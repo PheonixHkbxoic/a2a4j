@@ -6,6 +6,8 @@ import io.github.pheonixhkbxoic.a2a4j.core.server.A2AServer;
 import io.github.pheonixhkbxoic.a2a4j.core.spec.entity.AgentCard;
 import io.github.pheonixhkbxoic.a2a4j.mvc.WebMvcSseServerAdapter;
 import jakarta.validation.Validator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +18,9 @@ import org.springframework.web.servlet.function.ServerResponse;
 /**
  * @author PheonixHkbxoic
  */
+@Slf4j
 @ConditionalOnClass(value = {AgentCard.class, TaskManager.class})
+@AutoConfigureAfter(name = "io.github.pheonixhkbxoic.a2a4j.storage.redis.RedisTaskStoreAutoConfiguration")
 @Configuration
 public class A2a4jAgentMvcAutoConfiguration {
 
@@ -31,14 +35,16 @@ public class A2a4jAgentMvcAutoConfiguration {
     @ConditionalOnClass(InMemoryTaskStore.class)
     @Bean
     public InMemoryTaskStore inMemoryTaskStore() {
-        return new InMemoryTaskStore();
+        InMemoryTaskStore taskStore = new InMemoryTaskStore();
+        log.debug("InMemoryTaskStore has been created: {}", taskStore);
+        return taskStore;
     }
 
     @ConditionalOnMissingBean(TaskManager.class)
     @ConditionalOnClass(TaskManager.class)
     @Bean
-    public TaskManager inMemoryTaskManager(AgentInvoker agentInvoker) {
-        return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker);
+    public TaskManager defaultTaskManager(TaskStore taskStore, AgentInvoker agentInvoker) {
+        return new DefaultTaskManager(taskStore, pushNotificationSenderAuth(), agentInvoker);
     }
 
     @ConditionalOnMissingBean(ServerAdapter.class)

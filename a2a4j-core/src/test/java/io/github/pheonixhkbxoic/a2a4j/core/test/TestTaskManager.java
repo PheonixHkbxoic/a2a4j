@@ -90,7 +90,7 @@ public class TestTaskManager {
         InMemoryTaskStore taskStore = new InMemoryTaskStore();
         PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
         EchoAgent agent = new EchoAgent();
-        return new InMemoryTaskManager(taskStore, pushNotificationSenderAuth, new AgentInvoker() {
+        return new DefaultTaskManager(taskStore, pushNotificationSenderAuth, new AgentInvoker() {
             @Override
             public Mono<List<Artifact>> invoke(SendTaskRequest request) {
                 String userQuery = this.extractUserQuery(request.getParams());

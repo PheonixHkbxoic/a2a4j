@@ -1,5 +1,3 @@
-[TOC]
-
 # a2a4j
 
 agent to agent scenarios with google a2a protocol
@@ -73,6 +71,7 @@ Features:
   to [a2a4j-examples jdk8](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/jdk8)
   and [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main)
 - [x] support more LLM, eg.LangChain4j
+- [x] support redis as task storage
 
 ## a2a4j-examples
 
@@ -398,6 +397,22 @@ to [a2a4j-examples main](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/m
 
 3. 代码参考  
    [a2a4j-examples hosts cli](https://github.com/PheonixHkbxoic/a2a4j-examples/tree/main/hosts/cli)
+
+### TaskStore
+
+AgentInvoker used by DefaultTaskManager in agent, in factor TaskManager storages `Task` and `PushNotificationInfo` by
+TaskStore  
+InMemoryTaskStore is default, you can use `a2a4j-storage-redis-spring-boot-starter` dependency if you want use redis to
+store tasks
+
+```xml
+
+<dependency>
+    <groupId>io.github.pheonixhkbxoic</groupId>
+    <artifactId>a2a4j-storage-redis-spring-boot-starter</artifactId>
+    <version>2.0.1</version>
+</dependency>
+```
 
 ## Star History
 

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * @author PheonixHkbxoic
  * @date 2025/4/30 22:43
- * @desc agent invoker, used by TaskManager eg. InMemoryTaskManager
+ * @desc agent invoker, used by TaskManager eg. DefaultTaskManager
  */
 public interface AgentInvoker {
 
