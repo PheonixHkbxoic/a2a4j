@@ -20,8 +20,8 @@ import java.util.Objects;
  * @desc
  */
 @Slf4j
-public class InMemoryTaskManager extends AbstractTaskManager {
-    public InMemoryTaskManager(TaskStore taskStore, PushNotificationSenderAuth pushNotificationSenderAuth, AgentInvoker agentInvoker) {
+public class DefaultTaskManager extends AbstractTaskManager {
+    public DefaultTaskManager(TaskStore taskStore, PushNotificationSenderAuth pushNotificationSenderAuth, AgentInvoker agentInvoker) {
         super(taskStore, pushNotificationSenderAuth, agentInvoker);
     }
 

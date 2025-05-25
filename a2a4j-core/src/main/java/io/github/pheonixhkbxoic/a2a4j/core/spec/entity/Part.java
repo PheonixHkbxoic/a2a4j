@@ -18,9 +18,9 @@ import java.util.Map;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.PROPERTY,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
         // 根据此类型反序列化
-        property = "_type"
+        property = "type"
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = TextPart.class, name = "text"),
@@ -32,6 +32,10 @@ import java.util.Map;
 @AllArgsConstructor
 @Data
 public class Part implements Serializable {
+    public static String TEXT = "text";
+    public static String FILE = "file";
+    public static String DATA = "data";
+
     @NotBlank
     protected String type;
     @Nullable

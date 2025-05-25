@@ -85,7 +85,7 @@ public class WebfluxSseTaskTests {
         PushNotificationSenderAuth pushNotificationSenderAuth = new PushNotificationSenderAuth();
         EchoAgent echoAgent = new EchoAgent();
         AgentInvoker agentInvoker = new EchoAgentInvoker(echoAgent);
-        TaskManager taskManager = new InMemoryTaskManager(taskStore, pushNotificationSenderAuth, agentInvoker);
+        TaskManager taskManager = new DefaultTaskManager(taskStore, pushNotificationSenderAuth, agentInvoker);
         return new WebfluxSseServerAdapter(agentCard, taskManager, null, pushNotificationSenderAuth);
     }
 

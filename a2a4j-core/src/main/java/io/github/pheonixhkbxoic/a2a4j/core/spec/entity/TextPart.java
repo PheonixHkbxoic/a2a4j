@@ -19,16 +19,17 @@ public class TextPart extends Part implements Serializable {
     private String text;
 
     public TextPart() {
-        this.type = "text";
+        this.type = Part.TEXT;
     }
 
     public TextPart(String text) {
-        this.type = "text";
+        this.type = Part.TEXT;
         this.text = text;
     }
 
-    public TextPart(String type, Map<String, Object> metadata, String text) {
-        super(type, metadata);
+    public TextPart(String text, Map<String, Object> metadata) {
+        this.type = Part.TEXT;
         this.text = text;
+        this.metadata = metadata;
     }
 }

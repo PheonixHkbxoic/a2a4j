@@ -95,7 +95,7 @@ public class WebMvcSseIntegrationTests {
 
         @Bean
         public TaskManager taskManager() {
-            return new InMemoryTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker());
+            return new DefaultTaskManager(inMemoryTaskStore(), pushNotificationSenderAuth(), agentInvoker());
         }
 
         @Bean

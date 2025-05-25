@@ -24,6 +24,7 @@
         <module>a2a4j-servlet</module>
         <module>a2a4j-spring-webflux</module>
         <module>a2a4j-notification-webflux-spring-boot-starter</module>
+        <module>a2a4j-storage</module>
     </modules>
 
 

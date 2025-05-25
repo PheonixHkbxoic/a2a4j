@@ -21,11 +21,17 @@ public class FilePart extends Part implements Serializable {
     private FileContent file;
 
     public FilePart() {
-        super.setType("file");
+        this.type = Part.FILE;
     }
 
-    public FilePart(String type, Map<String, Object> metadata, FileContent file) {
-        super(type, metadata);
+    public FilePart(FileContent file) {
+        this.type = Part.FILE;
         this.file = file;
+    }
+    
+    public FilePart(FileContent file, Map<String, Object> metadata) {
+        this.type = Part.FILE;
+        this.file = file;
+        this.metadata = metadata;
     }
 }

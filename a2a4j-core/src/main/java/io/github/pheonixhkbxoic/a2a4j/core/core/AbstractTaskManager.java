@@ -14,9 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -29,7 +27,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public abstract class AbstractTaskManager implements TaskManager {
     protected TaskStore taskStore;
     protected final ReentrantLock lock = new ReentrantLock();
-    protected final Map<String, PushNotificationConfig> pushNotificationInfos = new HashMap<>();
     protected final ConcurrentMap<String, LinkedBlockingQueue<UpdateEvent>> sseEventQueueMap = new ConcurrentHashMap<>();
     protected boolean isClosing;
     protected PushNotificationSenderAuth pushNotificationSenderAuth;
@@ -133,7 +130,7 @@ public abstract class AbstractTaskManager implements TaskManager {
             String taskId = request.getParams().getId();
             log.info("Getting task push notification: {}", taskId);
             try {
-                PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(taskId);
+                PushNotificationConfig pushNotificationInfo = this.taskStore.getPushNotificationInfo(taskId);
                 TaskPushNotificationConfig taskPushNotificationConfig = TaskPushNotificationConfig.builder()
                         .id(taskId)
                         .pushNotificationConfig(pushNotificationInfo)
@@ -152,7 +149,7 @@ public abstract class AbstractTaskManager implements TaskManager {
             String taskId = request.getParams().getId();
             log.info("Setting task push notification: {}", taskId);
             try {
-                this.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
+                this.taskStore.setPushNotificationInfo(taskId, request.getParams().getPushNotificationConfig());
             } catch (Exception e) {
                 log.error("Setting task push notification exception: {}", e.getMessage());
                 return new SetTaskPushNotificationResponse(taskId, new InternalError("An error occurred while setting push notification config"));
@@ -191,35 +188,6 @@ public abstract class AbstractTaskManager implements TaskManager {
         return null;
     }
 
-    protected boolean hasPushNotificationInfo(String taskId) {
-        return pushNotificationInfos.get(taskId) != null;
-    }
-
-    protected PushNotificationConfig getPushNotificationInfo(String taskId) {
-        lock.lock();
-        try {
-            Task task = this.taskStore.query(taskId);
-            if (task == null) {
-                throw new ValueError("Task not found for " + taskId);
-            }
-            return this.pushNotificationInfos.get(taskId);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    protected void setPushNotificationInfo(String taskId, PushNotificationConfig info) {
-        lock.lock();
-        try {
-            Task task = this.taskStore.query(taskId);
-            if (task == null) {
-                throw new ValueError("Task not found for " + taskId);
-            }
-            this.pushNotificationInfos.put(taskId, info);
-        } finally {
-            lock.unlock();
-        }
-    }
 
     protected boolean verifyPushNotificationInfo(PushNotificationConfig info) {
         return PushNotificationSenderAuth.verifyPushNotificationUrl(info.getUrl());
@@ -230,11 +198,11 @@ public abstract class AbstractTaskManager implements TaskManager {
             log.warn("PushNotificationSenderAuth not be set");
             return;
         }
-        if (!hasPushNotificationInfo(task.getId())) {
+        if (!this.taskStore.hasPushNotificationInfo(task.getId())) {
             log.info("No push notification info found for task: {}", task.getId());
             return;
         }
-        PushNotificationConfig pushNotificationInfo = this.getPushNotificationInfo(task.getId());
+        PushNotificationConfig pushNotificationInfo = this.taskStore.getPushNotificationInfo(task.getId());
         log.info("Notifying for task: {}, {}", task.getId(), task.getStatus().getState().getState());
         this.pushNotificationSenderAuth.sendPushNotification(pushNotificationInfo.getUrl(), task);
     }
@@ -253,7 +221,7 @@ public abstract class AbstractTaskManager implements TaskManager {
                 task.getHistory().add(taskSendParams.getMessage());
             }
             this.taskStore.update(task);
-            this.setPushNotificationInfo(task.getId(), taskSendParams.getPushNotification());
+            this.taskStore.setPushNotificationInfo(task.getId(), taskSendParams.getPushNotification());
             return task;
         } finally {
             lock.unlock();
